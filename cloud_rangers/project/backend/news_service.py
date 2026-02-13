@@ -40,14 +40,23 @@ def is_product_specific(entry, product_name):
         text += entry.title.lower()
     if hasattr(entry, "summary"):
         text += entry.summary.lower()
+
     product_name = product_name.lower().strip()
-    if product_name not in text:
+    # check if any word from product_name is in text
+    if not any(word in text for word in product_name.split()):
         return False
+
+    # keep safety keywords check
     if not any(keyword in text for keyword in SAFETY_KEYWORDS):
         return False
-    if not any(keyword in text for keyword in FOOD_CONTEXT_KEYWORDS):
-        return False
+
+    # make FOOD_CONTEXT_KEYWORDS optional
+    # if you want to catch more articles, comment this line:
+    # if not any(keyword in text for keyword in FOOD_CONTEXT_KEYWORDS):
+    #     return False
+
     return True
+
 
 def parse_article_date(entry):
     try:
@@ -126,9 +135,34 @@ def format_date(date):
 # Main function to fetch news
 # -----------------------------
 def fetch_product_news(product_name, max_articles=10):
-    query = f'intitle:"{product_name}" ("recall" OR "contamination" OR "banned" OR "unsafe" OR "warning" OR "FSSAI" OR "FDA" OR "mislabel" OR "health risk")'
+    """
+    Fetch news articles related to a product's safety from Google News RSS.
+    
+    Args:
+        product_name (str): Name of the product to search for.
+        max_articles (int): Maximum number of articles to return.
+
+    Returns:
+        list[dict]: List of article dictionaries with title, link, source, thumbnail, and date.
+    """
+
+    # -----------------------------
+    # Prepare RSS query
+    # -----------------------------
+    query = f'{product_name} recall OR contamination OR banned OR unsafe OR warning OR FSSAI OR FDA OR mislabel OR "health risk"'
     rss_url = f"https://news.google.com/rss/search?q={quote_plus(query)}&hl=en-IN&gl=IN&ceid=IN:en"
+
+    # -----------------------------
+    # Parse RSS feed
+    # -----------------------------
     feed = feedparser.parse(rss_url)
+    print(f"RSS entries fetched: {len(feed.entries)}")
+    for entry in feed.entries[:5]:  # show first 5 for quick debug
+        print("Title:", entry.title)
+
+    # -----------------------------
+    # Process entries
+    # -----------------------------
     articles = []
     seen = set()
 
@@ -140,9 +174,12 @@ def fetch_product_news(product_name, max_articles=10):
             continue
         if not is_product_specific(entry, product_name):
             continue
+
+        # Extract source from title if present
         parts = entry.title.split(" - ")
         source = parts[-1] if len(parts) > 1 else "News"
         title = " - ".join(parts[:-1]) if len(parts) > 1 else entry.title
+
         article = {
             "title": title.strip(),
             "link": link.strip(),
@@ -150,11 +187,15 @@ def fetch_product_news(product_name, max_articles=10):
             "thumbnail": resolve_image(entry, link),
             "date": parse_article_date(entry)
         }
+
         articles.append(article)
         seen.add(link)
+
         if len(articles) >= max_articles:
             break
+
     return articles
+
 
 def get_safety_news(product_name, max_articles=10):
     articles = fetch_product_news(product_name, max_articles)
