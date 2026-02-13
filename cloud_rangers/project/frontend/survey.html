@@ -361,16 +361,18 @@
                 <div class="form-section">
                     <h3 class="section-title">
                         <i class="bi bi-exclamation-diamond section-icon"></i>
-                        Do you have any allergies?
+                        Do you have any allergies or sensitivities?
                     </h3>
+                    <p style="color: #6B7280; margin-bottom: 1rem;">Select all that apply</p>
+                    
                     <div class="checkbox-pills">
                         <div class="checkbox-pill">
                             <input type="checkbox" id="allergy-nuts" name="allergies" value="nuts">
-                            <label for="allergy-nuts">🥜 Nuts</label>
+                            <label for="allergy-nuts">🥜 Nuts (Peanuts, Tree Nuts)</label>
                         </div>
                         <div class="checkbox-pill">
                             <input type="checkbox" id="allergy-dairy" name="allergies" value="dairy">
-                            <label for="allergy-dairy">🥛 Dairy</label>
+                            <label for="allergy-dairy">🥛 Dairy Products</label>
                         </div>
                         <div class="checkbox-pill">
                             <input type="checkbox" id="allergy-gluten" name="allergies" value="gluten">
@@ -378,16 +380,39 @@
                         </div>
                         <div class="checkbox-pill">
                             <input type="checkbox" id="allergy-soy" name="allergies" value="soy">
-                            <label for="allergy-soy">🫘 Soy</label>
+                            <label for="allergy-soy">🫘 Soy Products</label>
                         </div>
                         <div class="checkbox-pill">
                             <input type="checkbox" id="allergy-eggs" name="allergies" value="eggs">
                             <label for="allergy-eggs">🥚 Eggs</label>
                         </div>
                         <div class="checkbox-pill">
+                            <input type="checkbox" id="allergy-shellfish" name="allergies" value="shellfish">
+                            <label for="allergy-shellfish">🦐 Shellfish</label>
+                        </div>
+                        <div class="checkbox-pill">
+                            <input type="checkbox" id="allergy-fragrance" name="allergies" value="fragrance">
+                            <label for="allergy-fragrance">🌸 Fragrances</label>
+                        </div>
+                        <div class="checkbox-pill">
+                            <input type="checkbox" id="allergy-preservatives" name="allergies" value="preservatives">
+                            <label for="allergy-preservatives">🧪 Preservatives</label>
+                        </div>
+                        <div class="checkbox-pill">
+                            <input type="checkbox" id="allergy-sulfites" name="allergies" value="sulfites">
+                            <label for="allergy-sulfites">🍷 Sulfites</label>
+                        </div>
+                        <div class="checkbox-pill">
                             <input type="checkbox" id="allergy-none" name="allergies" value="none">
                             <label for="allergy-none">✅ None</label>
                         </div>
+                    </div>
+                    
+                    <!-- Custom allergy input -->
+                    <div class="mt-4">
+                        <label for="customAllergies" class="form-label">Other Allergies or Sensitivities (Optional)</label>
+                        <input type="text" class="form-control" id="customAllergies" name="customAllergies" placeholder="e.g., Latex, Nickel, specific medications..." style="border: 2px solid #E5E7EB; border-radius: 12px; padding: 0.75rem 1rem;">
+                        <small class="text-muted">Separate multiple entries with commas</small>
                     </div>
                 </div>
                 
@@ -422,6 +447,9 @@
                             </div>
                             <div class="error-message" id="weightError">Please enter a valid weight</div>
                         </div>
+                    </div>
+                    <div class="bmi-display" id="bmiDisplay" style="display: none; background: #F0FDF4; padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                        <strong>Your BMI:</strong> <span id="bmiValue"></span> - <span id="bmiCategory"></span>
                     </div>
                 </div>
                 
@@ -480,6 +508,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Check authentication first
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+        
         // Form elements
         const form = document.getElementById('surveyForm');
         const progressBar = document.getElementById('progressBar');
@@ -490,8 +523,62 @@
         const ageInput = document.getElementById('age');
         const heightInput = document.getElementById('height');
         const weightInput = document.getElementById('weight');
+        const customAllergiesInput = document.getElementById('customAllergies');
         const allergyCheckboxes = document.querySelectorAll('input[name="allergies"]');
         const dietRadios = document.querySelectorAll('input[name="diet"]');
+        
+        // Check if this is first time or profile edit
+        const urlParams = new URLSearchParams(window.location.search);
+        const isFirstTime = urlParams.get('firsttime') === 'true';
+        
+        // Load existing profile if available (for editing)
+        function loadExistingProfile() {
+            const userProfile = localStorage.getItem('userProfile');
+            if (userProfile && !isFirstTime) {
+                try {
+                    const profile = JSON.parse(userProfile);
+                    
+                    // Load allergies
+                    if (profile.allergies && Array.isArray(profile.allergies)) {
+                        profile.allergies.forEach(allergy => {
+                            const checkbox = document.querySelector(`input[value="${allergy}"]`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                    
+                    // Load custom allergies
+                    if (profile.customAllergies) {
+                        customAllergiesInput.value = profile.customAllergies;
+                    }
+                    
+                    // Load physical stats
+                    if (profile.age) ageInput.value = profile.age;
+                    if (profile.height) heightInput.value = profile.height;
+                    if (profile.weight) weightInput.value = profile.weight;
+                    
+                    // Load diet preference
+                    if (profile.diet) {
+                        const dietRadio = document.querySelector(`input[value="${profile.diet}"]`);
+                        if (dietRadio) dietRadio.checked = true;
+                    }
+                    
+                    // Update progress and BMI
+                    updateProgress();
+                    calculateBMI();
+                    
+                    // Change button text to "Update Profile"
+                    const submitBtn = document.querySelector('.btn-primary-custom');
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Update Profile';
+                    
+                    console.log('Loaded existing profile:', profile);
+                } catch (e) {
+                    console.error('Error loading profile:', e);
+                }
+            }
+        }
+        
+        // Load profile on page load
+        window.addEventListener('load', loadExistingProfile);
         
         // "None" checkbox special handling
         const noneCheckbox = document.getElementById('allergy-none');
@@ -502,6 +589,10 @@
                 otherAllergyCheckboxes.forEach(cb => {
                     cb.checked = false;
                 });
+                customAllergiesInput.value = '';
+                customAllergiesInput.disabled = true;
+            } else {
+                customAllergiesInput.disabled = false;
             }
         });
         
@@ -509,8 +600,15 @@
             cb.addEventListener('change', function() {
                 if (this.checked) {
                     noneCheckbox.checked = false;
+                    customAllergiesInput.disabled = false;
                 }
             });
+        });
+        
+        customAllergiesInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                noneCheckbox.checked = false;
+            }
         });
         
         // Update progress bar
@@ -542,6 +640,49 @@
             progressBar.style.width = percentage + '%';
             progressText.textContent = Math.round(percentage) + '% Complete';
         }
+        
+        // BMI Calculator
+        function calculateBMI() {
+            const height = parseFloat(heightInput.value);
+            const weight = parseFloat(weightInput.value);
+            
+            if (height && weight && height >= 50 && height <= 250 && weight >= 20 && weight <= 300) {
+                const heightInMeters = height / 100;
+                const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
+                
+                const bmiDisplay = document.getElementById('bmiDisplay');
+                const bmiValue = document.getElementById('bmiValue');
+                const bmiCategory = document.getElementById('bmiCategory');
+                
+                bmiValue.textContent = bmi;
+                
+                let category = '';
+                let color = '';
+                
+                if (bmi < 18.5) {
+                    category = 'Underweight';
+                    color = '#F59E0B';
+                } else if (bmi >= 18.5 && bmi < 25) {
+                    category = 'Normal weight';
+                    color = '#10B981';
+                } else if (bmi >= 25 && bmi < 30) {
+                    category = 'Overweight';
+                    color = '#F59E0B';
+                } else {
+                    category = 'Obese';
+                    color = '#EF4444';
+                }
+                
+                bmiCategory.textContent = category;
+                bmiCategory.style.color = color;
+                bmiCategory.style.fontWeight = '700';
+                bmiDisplay.style.display = 'block';
+            }
+        }
+        
+        // Add BMI calculation on input
+        heightInput.addEventListener('input', calculateBMI);
+        weightInput.addEventListener('input', calculateBMI);
         
         // Add event listeners to all inputs
         allergyCheckboxes.forEach(cb => cb.addEventListener('change', updateProgress));
@@ -599,22 +740,38 @@
                 dietError.style.display = 'none';
             }
             
+            // Validate that at least allergy info is provided
+            const hasAllergies = Array.from(allergyCheckboxes).some(cb => cb.checked);
+            const hasCustomAllergies = customAllergiesInput.value.trim() !== '';
+            
+            if (!hasAllergies && !hasCustomAllergies) {
+                alert('Please select at least one allergy option or check "None" if you have no allergies.');
+                isValid = false;
+            }
+            
             // If form is valid, show success and redirect
             if (isValid) {
                 // Collect form data
+                const selectedAllergies = Array.from(allergyCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                
+                const customAllergies = customAllergiesInput.value.trim();
+                
                 const formData = {
-                    allergies: Array.from(allergyCheckboxes)
-                        .filter(cb => cb.checked)
-                        .map(cb => cb.value),
+                    allergies: selectedAllergies,
+                    customAllergies: customAllergies,
                     age: ageInput.value,
                     height: heightInput.value,
                     weight: weightInput.value,
-                    diet: Array.from(dietRadios).find(radio => radio.checked).value
+                    diet: Array.from(dietRadios).find(radio => radio.checked).value,
+                    bmi: calculateBMIValue(),
+                    lastUpdated: new Date().toISOString()
                 };
                 
                 console.log('Form Data:', formData);
                 
-                // Store in localStorage (for demo purposes)
+                // Store in localStorage
                 localStorage.setItem('userProfile', JSON.stringify(formData));
                 
                 // Show success message
@@ -627,6 +784,18 @@
                 }, 2000);
             }
         });
+        
+        // Calculate BMI value for storage
+        function calculateBMIValue() {
+            const height = parseFloat(heightInput.value);
+            const weight = parseFloat(weightInput.value);
+            
+            if (height && weight) {
+                const heightInMeters = height / 100;
+                return (weight / (heightInMeters * heightInMeters)).toFixed(1);
+            }
+            return null;
+        }
         
         // Real-time validation
         ageInput.addEventListener('blur', function() {
