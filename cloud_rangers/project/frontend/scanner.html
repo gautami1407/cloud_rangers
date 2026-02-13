@@ -1,15 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Scan Product</title>
+    <title>Scan Barcode</title>
 </head>
 <body>
 
-    <h2>Scan Product Barcode</h2>
-    <div id="scanner" style="width:400px;height:300px;"></div>
+<h2>Scanning...</h2>
+<div id="scanner" style="width:400px;height:300px;"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
-    <script src="scanner.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
+<script>
+console.log("Scanner loaded");
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector('#scanner'),
+            constraints: {
+                facingMode: "environment"
+            }
+        },
+        decoder: {
+            readers: ["ean_reader", "upc_reader"]
+        }
+    }, function (err) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        Quagga.start();
+    });
+
+    Quagga.onDetected(function (data) {
+        const code = data.codeResult.code;
+        alert("Scanned: " + code);
+        Quagga.stop();
+    });
+
+});
+</script>
 
 </body>
 </html>
