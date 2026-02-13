@@ -28,33 +28,58 @@ function transformOpenFoodData(product) {
 // MAIN LOAD
 // ============================================
 window.addEventListener("load", function () {
-
     const storedProduct = localStorage.getItem("openFoodProduct");
 
-    if (!storedProduct) {
-        showError("No scanned product found. Please scan again.");
+    if (storedProduct) {
+        const rawProduct = JSON.parse(storedProduct);
+        const product = transformOpenFoodData(rawProduct);
+        renderDynamicProduct(product);
+        fetchNews(product.name);
+        localStorage.removeItem("openFoodProduct");
+    }
+
+    // Manual barcode button
+    const fetchBtn = document.getElementById("fetch-barcode-btn");
+    if (fetchBtn) {
+        fetchBtn.addEventListener("click", () => {
+            const barcode = document.getElementById("barcode-input").value.trim();
+            fetchProductByBarcode(barcode);
+        });
+    }
+});
+
+// ============================================
+// FETCH PRODUCT BY BARCODE
+// ============================================
+async function fetchProductByBarcode(barcode) {
+    if (!barcode) {
+        alert("Please enter a barcode.");
         return;
     }
 
-    const rawProduct = JSON.parse(storedProduct);
-    const product = transformOpenFoodData(rawProduct);
+    try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        const data = await res.json();
 
-    renderDynamicProduct(product);
-    fetchNews(product.name);
+        if (!data.product || data.status !== 1) {
+            showError("Product not found for this barcode.");
+            return;
+        }
 
-    localStorage.removeItem("openFoodProduct");
-    document.getElementById("fetch-barcode-btn").addEventListener("click", () => {
-    const barcode = document.getElementById("barcode-input").value.trim();
-    fetchProductByBarcode(barcode);
-});
+        const product = transformOpenFoodData(data.product);
+        renderDynamicProduct(product);
+        fetchNews(product.name);
 
-});
+    } catch (err) {
+        console.error("Error fetching product:", err);
+        showError("Failed to fetch product. Try again.");
+    }
+}
 
 // ============================================
 // RENDER PRODUCT
 // ============================================
 function renderDynamicProduct(product) {
-
     const loading = document.getElementById("loadingContainer");
     const container = document.getElementById("productContainer");
 
@@ -64,12 +89,10 @@ function renderDynamicProduct(product) {
     container.innerHTML = generateProductHTML(product);
 }
 
-
 // ============================================
 // GENERATE FULL 6 FACTOR HTML
 // ============================================
 function generateProductHTML(product) {
-
     const concernData = calculateConcern(product);
 
     return `
@@ -98,8 +121,7 @@ function generateProductHTML(product) {
                 <!-- INGREDIENTS -->
                 <div class="info-card">
                     <h3>Ingredients</h3>
-                    ${
-                        product.ingredientsList.length > 0
+                    ${product.ingredientsList.length > 0
                         ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>`
                         : `<p>${product.ingredientsText}</p>`
                     }
@@ -119,8 +141,7 @@ function generateProductHTML(product) {
                 <!-- ADDITIVES -->
                 <div class="info-card">
                     <h3>Additives</h3>
-                    ${
-                        product.additives.length > 0
+                    ${product.additives.length > 0
                         ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>`
                         : `<p>No additives reported</p>`
                     }
@@ -129,8 +150,7 @@ function generateProductHTML(product) {
                 <!-- ALLERGENS -->
                 <div class="info-card">
                     <h3>Allergens</h3>
-                    ${
-                        product.allergens
+                    ${product.allergens
                         ? `<p class="allergen-danger">${product.allergens}</p>`
                         : `<p class="allergen-safe">No allergens reported</p>`
                     }
@@ -146,13 +166,10 @@ function generateProductHTML(product) {
     `;
 }
 
-
-
 // ============================================
 // DYNAMIC CONCERN CALCULATION
 // ============================================
 function calculateConcern(product) {
-
     let score = 100;
 
     if (product.nutriscore === "e") score -= 40;
@@ -160,8 +177,7 @@ function calculateConcern(product) {
     else if (product.nutriscore === "c") score -= 10;
 
     if (product.additives.length > 5) score -= 20;
-    if (product.ingredientsText.toLowerCase().includes("palm oil"))
-        score -= 10;
+    if (product.ingredientsText.toLowerCase().includes("palm oil")) score -= 10;
 
     if (score >= 80)
         return { score, level: "low", label: "Low Concern", explanation: "Good nutritional profile with minimal risk indicators." };
@@ -176,20 +192,25 @@ function calculateConcern(product) {
 // ERROR HANDLER
 // ============================================
 function showError(message) {
+    const loading = document.getElementById("loadingContainer");
+    const container = document.getElementById("productContainer");
 
-    document.getElementById("loadingContainer").classList.remove("active");
-    document.getElementById("productContainer").classList.add("active");
+    if (loading) loading.classList.remove("active");
+    if (container) container.classList.add("active");
 
-    document.getElementById("productContainer").innerHTML = `
-        <div style="text-align:center;padding:5rem 2rem;">
-            <h2>Product Not Found</h2>
-            <p>${message}</p>
-            <a href="dashboard.html" class="back-btn">
-                Return to Dashboard
-            </a>
-        </div>
-    `;
+    if (container) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:5rem 2rem;">
+                <h2>Product Not Found</h2>
+                <p>${message}</p>
+                <a href="dashboard.html" class="back-btn">
+                    Return to Dashboard
+                </a>
+            </div>
+        `;
+    }
 }
+
 // ============================================
 // FETCH PRODUCT SAFETY NEWS
 // ============================================
@@ -201,10 +222,11 @@ async function fetchNews(productName) {
             body: JSON.stringify({ product_name: productName })
         });
         const data = await res.json();
+
         if (data.news && data.news.length > 0) {
             displayNews(data.news);
         } else {
-            displayNews([]); // show empty state
+            displayNews([]);
         }
     } catch (err) {
         console.error("Error fetching news:", err);
@@ -233,30 +255,4 @@ function displayNews(newsList) {
             </div>
         `;
     });
-}
-
-async function fetchProductByBarcode(barcode) {
-    if (!barcode) {
-        alert("Please enter a barcode.");
-        return;
-    }
-
-    try {
-        // Open Food Facts API
-        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        const data = await res.json();
-
-        if (!data.product || data.status !== 1) {
-            showError("Product not found for this barcode.");
-            return;
-        }
-
-        const product = transformOpenFoodData(data.product);
-        renderDynamicProduct(product);
-        fetchNews(product.name);
-
-    } catch (err) {
-        console.error("Error fetching product:", err);
-        showError("Failed to fetch product. Try again.");
-    }
 }
