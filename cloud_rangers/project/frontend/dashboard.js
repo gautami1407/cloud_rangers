@@ -433,3 +433,11 @@ function showError(message) {
         </div>
     `;
 }
+async function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        const result = await window.firebaseAuth.logout();
+        if (result.success) {
+            window.location.href = 'login.html';
+        }
+    }
+}
