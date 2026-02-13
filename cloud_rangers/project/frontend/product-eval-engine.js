@@ -1,3 +1,15 @@
+function transformOpenFoodData(product) {
+    return {
+        name: product.product_name || "Unknown Product",
+        brand: product.brands || "Unknown Brand",
+        ingredients: product.ingredients_text || "Not Available",
+        nutriments: product.nutriments || {},
+        nutriscore: product.nutriscore_grade || "unknown",
+        additives: product.additives_tags || [],
+        allergens: product.allergens || "None"
+    };
+}
+
 // ============================================
 // PRODUCT EVALUATION ENGINE - 6-FACTOR MODEL
 // ============================================
@@ -126,21 +138,30 @@ const productDatabase = {
 };
 
 // Load product on page load
-window.addEventListener('load', function() {
+window.addEventListener('load', function () {
 
-    const scannedBarcode = localStorage.getItem('scannedBarcode');
-    let selectedProduct;
+    const storedProduct = localStorage.getItem("openFoodProduct");
 
-    if (scannedBarcode && barcodeMap[scannedBarcode]) {
-        selectedProduct = barcodeMap[scannedBarcode];
+    if (storedProduct) {
+
+        const parsed = JSON.parse(storedProduct);
+        const product = transformOpenFoodData(parsed);
+
+        loadDynamicProduct(product);
+
+        // Optional: clear storage after loading
+        localStorage.removeItem("openFoodProduct");
+
     } else {
-        selectedProduct = localStorage.getItem('selectedProduct') || 'Dark Chocolate Bar';
+
+        const selectedProduct =
+            localStorage.getItem('selectedProduct') || 'Dark Chocolate Bar';
+
+        loadProduct(selectedProduct);
     }
 
-    setTimeout(() => {
-        loadProduct(selectedProduct);
-    }, 1500);
 });
+
 
 
 function loadProduct(productName) {
@@ -449,3 +470,34 @@ function showError(message) {
         </div>
     `;
 }
+function loadDynamicProduct(product) {
+
+    document.getElementById("product-name").innerText = product.name;
+    document.getElementById("brand-name").innerText = product.brand;
+
+    document.getElementById("ingredients").innerText = product.ingredients;
+
+    console.log("Nutriments:", product.nutriments);
+    console.log("Nutriscore:", product.nutriscore);
+
+    // Here you can plug into your 6-factor engine
+    evaluateDynamicProduct(product);
+}
+function evaluateDynamicProduct(product) {
+
+    let healthScore = 100;
+
+    // Example scoring logic
+    if (product.nutriscore === "e") healthScore -= 40;
+    if (product.nutriscore === "d") healthScore -= 25;
+    if (product.nutriscore === "c") healthScore -= 10;
+
+    if (product.additives.length > 5) healthScore -= 20;
+
+    if (product.ingredients.toLowerCase().includes("palm oil"))
+        healthScore -= 10;
+
+    document.getElementById("health-score").innerText =
+        healthScore + "/100";
+}
+

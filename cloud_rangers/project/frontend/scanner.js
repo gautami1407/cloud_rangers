@@ -1,75 +1,66 @@
-function transformOpenFoodData(product) {
+document.addEventListener("DOMContentLoaded", function () {
 
-    return {
-        name: product.product_name || "Unknown Product",
-        brand: product.brands || "Unknown Brand",
-        ingredients: product.ingredients_text || "",
-        nutrition: product.nutriments || {},
-        additives: product.additives_tags || [],
-        nutriscore: product.nutriscore_grade || "unknown",
-        allergens: product.allergens || ""
-    };
-}
+    let scanned = false; // prevent multiple scans
 
-window.addEventListener('load', function () {
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector('#scanner'),
+            constraints: {
+                facingMode: "environment"
+            }
+        },
+        decoder: {
+            readers: ["ean_reader", "upc_reader"]
+        }
+    }, function (err) {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        Quagga.start();
+    });
 
-    const openFoodData = localStorage.getItem("openFoodProduct");
+    Quagga.onDetected(async function (data) {
 
-    if (openFoodData) {
+        if (scanned) return; // prevent double scan
+        scanned = true;
 
-        const parsedData = JSON.parse(openFoodData);
-        const transformed = transformOpenFoodData(parsedData);
+        const barcode = data.codeResult.code;
+        console.log("Scanned:", barcode);
 
-        loadDynamicProduct(transformed);
+        try {
 
-    } else {
+            const response = await fetch(
+                `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
+            );
 
-        const selectedProduct = localStorage.getItem('selectedProduct') || 'Dark Chocolate Bar';
-        loadProduct(selectedProduct);
-    }
+            const result = await response.json();
 
-});
+            if (result.status === 1) {
 
+                // Store product data
+                localStorage.setItem(
+                    "openFoodProduct",
+                    JSON.stringify(result.product)
+                );
 
-Quagga.onDetected(async function (data) {
+                Quagga.stop();
 
-    const barcode = data.codeResult.code;
-    console.log("Scanned:", barcode);
+                window.location.href = "product.html";
 
-    Quagga.stop();
+            } else {
+                alert("Product not found in Open Food Facts.");
+                scanned = false; // allow retry
+            }
 
-    try {
-        const response = await fetch(
-            `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
-        );
-
-        const result = await response.json();
-
-        if (result.status === 1) {
-
-            // Store full product data
-            localStorage.setItem("openFoodProduct", JSON.stringify(result.product));
-
-            window.location.href = "product.html";
-
-        } else {
-            alert("Product not found in Open Food Facts database.");
+        } catch (error) {
+            console.error(error);
+            alert("Error fetching product data.");
+            scanned = false;
         }
 
-    } catch (error) {
-        console.error(error);
-        alert("Error fetching product data.");
-    }
+    });
 
 });
-function loadDynamicProduct(product) {
-
-    document.getElementById("product-name").innerText = product.name;
-    document.getElementById("brand-name").innerText = product.brand;
-
-    // Example: show ingredients
-    document.getElementById("ingredients").innerText = product.ingredients;
-
-    // Call your scoring engine
-    evaluateProduct(product);
-}
