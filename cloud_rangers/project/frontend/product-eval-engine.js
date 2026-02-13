@@ -49,11 +49,15 @@ window.addEventListener("load", function () {
 // ============================================
 function renderDynamicProduct(product) {
 
-    document.getElementById("loadingContainer").classList.remove("active");
-    document.getElementById("productContainer").classList.add("active");
+    const loading = document.getElementById("loadingContainer");
+    const container = document.getElementById("productContainer");
 
-    document.getElementById("productContainer").innerHTML = generateProductHTML(product);
+    if (loading) loading.style.display = "none";
+    if (container) container.style.display = "block";
+
+    container.innerHTML = generateProductHTML(product);
 }
+
 
 // ============================================
 // GENERATE FULL 6 FACTOR HTML
@@ -66,7 +70,9 @@ function generateProductHTML(product) {
         <div class="product-header">
             <div class="product-main">
                 <div class="product-image">
-                    ${product.image ? `<img src="${product.image}" style="max-width:120px;">` : "📦"}
+                    ${product.image 
+                        ? `<img src="${product.image}" style="max-width:120px;">`
+                        : "📦"}
                 </div>
                 <div class="product-details">
                     <div class="product-brand">${product.brand}</div>
@@ -77,83 +83,54 @@ function generateProductHTML(product) {
         </div>
 
         <div class="concern-score-card">
-            <div class="concern-score-header">
-                <div>
-                    <h2>Concern Score</h2>
-                    <p style="font-size:0.9rem;color:#6B7280;">
-                        Auto-evaluated using OpenFoodFacts data
-                    </p>
-                </div>
-                <div>
-                    <div class="concern-level">${concernData.score}</div>
-                    <span class="concern-badge ${concernData.level}">
-                        ${concernData.label}
-                    </span>
-                </div>
-            </div>
-            <div class="concern-explanation">
-                ${concernData.explanation}
-            </div>
+            <h2>Concern Score: ${concernData.score}</h2>
+            <p><strong>${concernData.label}</strong></p>
+            <p>${concernData.explanation}</p>
         </div>
 
-        <div class="factors-grid">
-
-            <div class="factor-card">
-                <div class="factor-header">
-                    <h3>Ingredients</h3>
-                </div>
-                <div class="factor-content">
-                    ${product.ingredientsList.length > 0
-                        ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>`
-                        : `<p>${product.ingredientsText}</p>`
-                    }
-                </div>
-            </div>
-
-            <div class="factor-card">
-                <div class="factor-header">
-                    <h3>NutriScore</h3>
-                </div>
-                <div class="factor-content">
-                    <h2 style="text-transform:uppercase;">
-                        ${product.nutriscore}
-                    </h2>
-                </div>
-            </div>
-
-            <div class="factor-card">
-                <div class="factor-header">
-                    <h3>Additives</h3>
-                </div>
-                <div class="factor-content">
-                    ${product.additives.length > 0
-                        ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>`
-                        : `<p>No additives listed</p>`
-                    }
-                </div>
-            </div>
-
-            <div class="factor-card">
-                <div class="factor-header">
-                    <h3>Allergens</h3>
-                </div>
-                <div class="factor-content">
-                    ${product.allergens
-                        ? `<span style="color:red;">${product.allergens}</span>`
-                        : `<span style="color:green;">No allergens reported</span>`
-                    }
-                </div>
-            </div>
-
+        <div class="factor-card">
+            <h3>Ingredients</h3>
+            ${
+                product.ingredientsList.length > 0
+                ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>`
+                : `<p>${product.ingredientsText}</p>`
+            }
         </div>
 
-        <div style="background:#EFF6FF;padding:2rem;border-radius:20px;text-align:center;margin-top:2rem;">
-            <p style="color:#1E40AF;font-weight:600;margin:0;">
-                Data sourced live from OpenFoodFacts.
-            </p>
+        <div class="factor-card">
+            <h3>Nutrition (per 100g)</h3>
+            <ul>
+                <li>Energy: ${product.nutriments["energy-kcal_100g"] || "N/A"} kcal</li>
+                <li>Sugar: ${product.nutriments.sugars_100g || "N/A"} g</li>
+                <li>Fat: ${product.nutriments.fat_100g || "N/A"} g</li>
+                <li>Salt: ${product.nutriments.salt_100g || "N/A"} g</li>
+            </ul>
+        </div>
+
+        <div class="factor-card">
+            <h3>Additives</h3>
+            ${
+                product.additives.length > 0
+                ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>`
+                : `<p>No additives listed</p>`
+            }
+        </div>
+
+        <div class="factor-card">
+            <h3>Allergens</h3>
+            ${
+                product.allergens
+                ? `<span style="color:red;">${product.allergens}</span>`
+                : `<span style="color:green;">No allergens reported</span>`
+            }
+        </div>
+
+        <div style="margin-top:2rem;padding:1rem;background:#EFF6FF;border-radius:12px;">
+            Data sourced live from OpenFoodFacts.
         </div>
     `;
 }
+
 
 // ============================================
 // DYNAMIC CONCERN CALCULATION
