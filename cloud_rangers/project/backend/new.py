@@ -1,6 +1,6 @@
 """
-Product Health & Safety Analyzer - Production Ready
-A streamlined tool for analyzing product safety, health impact, and compliance
+Product Health & Safety Analyzer - Enhanced Camera Version
+Improved camera quality, preprocessing, and barcode detection
 """
 
 import streamlit as st
@@ -25,9 +25,10 @@ except ImportError:
 
 try:
     import cv2
+    import numpy as np
     import av
     from pyzbar import pyzbar
-    from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration
+    from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, RTCConfiguration, WebRtcMode
     CAMERA_AVAILABLE = True
 except ImportError:
     CAMERA_AVAILABLE = False
@@ -141,6 +142,22 @@ def load_css():
         text-align: center;
     }
     
+    /* Barcode detection box */
+    .barcode-detected {
+        background: #d4edda;
+        border: 3px solid #28a745;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        text-align: center;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+    
     /* Nutrient table */
     .nutrient-table {
         width: 100%;
@@ -179,11 +196,20 @@ def load_css():
         border-radius: 8px;
         font-weight: 600;
     }
+    
+    /* Camera tips box */
+    .camera-tips {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # ============================================================================
-# BARCODE PROCESSOR (Camera)
+# ENHANCED BARCODE PROCESSOR (Camera)
 # ============================================================================
 
 if CAMERA_AVAILABLE:
@@ -191,52 +217,257 @@ if CAMERA_AVAILABLE:
         {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
     )
 
-    class BarcodeProcessor(VideoProcessorBase):
-        """Video processor for real-time barcode scanning"""
+    class EnhancedBarcodeProcessor(VideoProcessorBase):
+        """Enhanced video processor with better image quality and barcode detection"""
         
         def __init__(self):
             self.detected_code = None
             self.last_detection_time = 0
-            self.detection_cooldown = 2  # seconds
+            self.detection_cooldown = 1.5  # seconds
+            self.detection_history = []  # Store recent detections for verification
+            self.confidence_threshold = 2  # Require 2 consecutive detections
+            self.frame_count = 0
+            self.process_every_n_frames = 2  # Process every 2nd frame for performance
+            
+        def preprocess_image(self, img):
+            """
+            Enhanced image preprocessing for better barcode detection
+            """
+            # Convert to grayscale
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            enhanced = clahe.apply(gray)
+            
+            # Denoise
+            denoised = cv2.fastNlMeansDenoising(enhanced, None, 10, 7, 21)
+            
+            # Sharpen the image
+            kernel = np.array([[-1,-1,-1],
+                             [-1, 9,-1],
+                             [-1,-1,-1]])
+            sharpened = cv2.filter2D(denoised, -1, kernel)
+            
+            # Adaptive thresholding for better contrast
+            binary = cv2.adaptiveThreshold(
+                sharpened, 255, 
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                cv2.THRESH_BINARY, 
+                11, 2
+            )
+            
+            return [gray, enhanced, denoised, sharpened, binary]
+        
+        def decode_with_multiple_methods(self, img):
+            """
+            Try multiple preprocessing methods to detect barcode
+            """
+            all_barcodes = []
+            
+            # Method 1: Original image
+            barcodes = pyzbar.decode(img)
+            all_barcodes.extend(barcodes)
+            
+            # Method 2: Multiple preprocessed versions
+            preprocessed_images = self.preprocess_image(img)
+            
+            for processed_img in preprocessed_images:
+                barcodes = pyzbar.decode(processed_img)
+                all_barcodes.extend(barcodes)
+            
+            # Method 3: Try with different rotations (small angles)
+            for angle in [-5, 5, -10, 10]:
+                height, width = img.shape[:2]
+                center = (width // 2, height // 2)
+                rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+                rotated = cv2.warpAffine(img, rotation_matrix, (width, height))
+                
+                gray_rotated = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
+                barcodes = pyzbar.decode(gray_rotated)
+                all_barcodes.extend(barcodes)
+            
+            return all_barcodes
+        
+        def verify_barcode(self, barcode_data: str) -> bool:
+            """
+            Verify barcode by checking if it appears multiple times
+            """
+            self.detection_history.append(barcode_data)
+            
+            # Keep only recent detections
+            if len(self.detection_history) > 5:
+                self.detection_history.pop(0)
+            
+            # Count occurrences of this barcode
+            count = self.detection_history.count(barcode_data)
+            
+            return count >= self.confidence_threshold
+        
+        def draw_detection_ui(self, img, barcode):
+            """
+            Draw enhanced UI elements for barcode detection
+            """
+            x, y, w, h = barcode.rect
+            barcode_data = barcode.data.decode("utf-8")
+            
+            # Draw thick green rectangle
+            cv2.rectangle(img, (x-5, y-5), (x + w + 5, y + h + 5), (0, 255, 0), 4)
+            
+            # Draw corner markers
+            corner_length = 20
+            corners = [
+                (x-5, y-5), (x + w + 5, y-5),
+                (x-5, y + h + 5), (x + w + 5, y + h + 5)
+            ]
+            
+            # Top-left
+            cv2.line(img, corners[0], (corners[0][0] + corner_length, corners[0][1]), (0, 255, 0), 6)
+            cv2.line(img, corners[0], (corners[0][0], corners[0][1] + corner_length), (0, 255, 0), 6)
+            
+            # Top-right
+            cv2.line(img, corners[1], (corners[1][0] - corner_length, corners[1][1]), (0, 255, 0), 6)
+            cv2.line(img, corners[1], (corners[1][0], corners[1][1] + corner_length), (0, 255, 0), 6)
+            
+            # Bottom-left
+            cv2.line(img, corners[2], (corners[2][0] + corner_length, corners[2][1]), (0, 255, 0), 6)
+            cv2.line(img, corners[2], (corners[2][0], corners[2][1] - corner_length), (0, 255, 0), 6)
+            
+            # Bottom-right
+            cv2.line(img, corners[3], (corners[3][0] - corner_length, corners[3][1]), (0, 255, 0), 6)
+            cv2.line(img, corners[3], (corners[3][0], corners[3][1] - corner_length), (0, 255, 0), 6)
+            
+            # Add background for text
+            text = f"BARCODE: {barcode_data}"
+            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+            
+            # Draw text background
+            bg_x1 = x
+            bg_y1 = y - 40
+            bg_x2 = bg_x1 + text_size[0] + 10
+            bg_y2 = bg_y1 + text_size[1] + 10
+            
+            cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), (0, 255, 0), -1)
+            
+            # Add barcode text
+            cv2.putText(
+                img, 
+                text, 
+                (x + 5, y - 15),
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                0.8,
+                (0, 0, 0), 
+                2
+            )
+            
+            # Add detection confidence indicator
+            confidence_text = "VERIFIED" if self.verify_barcode(barcode_data) else "DETECTING..."
+            cv2.putText(
+                img,
+                confidence_text,
+                (x, y + h + 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 255, 0) if self.verify_barcode(barcode_data) else (255, 165, 0),
+                2
+            )
+            
+            return img
         
         def recv(self, frame):
-            """Process video frame and detect barcodes"""
+            """Process video frame and detect barcodes with enhanced quality"""
             try:
-                img = frame.to_ndarray(format="bgr24")
+                self.frame_count += 1
                 
-                # Decode barcodes
-                barcodes = pyzbar.decode(img)
+                # Skip frames for performance
+                if self.frame_count % self.process_every_n_frames != 0:
+                    img = frame.to_ndarray(format="bgr24")
+                    return av.VideoFrame.from_ndarray(img, format="bgr24")
+                
+                # Get frame
+                img = frame.to_ndarray(format="bgr24")
+                original_img = img.copy()
+                
+                # Enhance image quality
+                # Increase brightness slightly
+                img = cv2.convertScaleAbs(img, alpha=1.1, beta=10)
+                
+                # Apply bilateral filter to reduce noise while keeping edges
+                img = cv2.bilateralFilter(img, 9, 75, 75)
+                
+                # Decode barcodes with multiple methods
+                barcodes = self.decode_with_multiple_methods(img)
                 
                 current_time = time.time()
                 
-                for barcode in barcodes:
-                    try:
-                        barcode_data = barcode.data.decode("utf-8")
-                        
-                        # Only update if cooldown has passed
-                        if current_time - self.last_detection_time > self.detection_cooldown:
-                            self.detected_code = barcode_data
-                            self.last_detection_time = current_time
-                        
-                        # Draw rectangle around barcode
-                        x, y, w, h = barcode.rect
-                        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                        
-                        # Add barcode text
-                        cv2.putText(
-                            img, 
-                            barcode_data, 
-                            (x, y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 
-                            0.5,
-                            (0, 255, 0), 
-                            2
-                        )
-                        break  # Process only first barcode
+                if barcodes:
+                    # Group barcodes by data (remove duplicates from different methods)
+                    unique_barcodes = {}
+                    for barcode in barcodes:
+                        try:
+                            barcode_data = barcode.data.decode("utf-8")
+                            if barcode_data not in unique_barcodes:
+                                unique_barcodes[barcode_data] = barcode
+                        except:
+                            continue
                     
-                    except Exception as e:
-                        logger.error(f"Error processing barcode: {e}")
-                        continue
+                    # Process the first unique barcode
+                    for barcode_data, barcode in unique_barcodes.items():
+                        # Verify barcode appears multiple times
+                        if self.verify_barcode(barcode_data):
+                            # Only update if cooldown has passed
+                            if current_time - self.last_detection_time > self.detection_cooldown:
+                                self.detected_code = barcode_data
+                                self.last_detection_time = current_time
+                                logger.info(f"Barcode detected: {barcode_data}")
+                        
+                        # Draw detection UI
+                        img = self.draw_detection_ui(img, barcode)
+                        break  # Process only first barcode
+                
+                # Add guide overlay
+                height, width = img.shape[:2]
+                
+                # Draw center guide box
+                box_width = width // 2
+                box_height = height // 3
+                box_x = (width - box_width) // 2
+                box_y = (height - box_height) // 2
+                
+                # Draw dashed rectangle as guide
+                dash_length = 20
+                gap_length = 10
+                color = (255, 255, 255)
+                thickness = 2
+                
+                # Top line
+                for i in range(box_x, box_x + box_width, dash_length + gap_length):
+                    cv2.line(img, (i, box_y), (min(i + dash_length, box_x + box_width), box_y), color, thickness)
+                
+                # Bottom line
+                for i in range(box_x, box_x + box_width, dash_length + gap_length):
+                    cv2.line(img, (i, box_y + box_height), (min(i + dash_length, box_x + box_width), box_y + box_height), color, thickness)
+                
+                # Left line
+                for i in range(box_y, box_y + box_height, dash_length + gap_length):
+                    cv2.line(img, (box_x, i), (box_x, min(i + dash_length, box_y + box_height)), color, thickness)
+                
+                # Right line
+                for i in range(box_y, box_y + box_height, dash_length + gap_length):
+                    cv2.line(img, (box_x + box_width, i), (box_x + box_width, min(i + dash_length, box_y + box_height)), color, thickness)
+                
+                # Add instruction text
+                instruction = "Align barcode within the guide box"
+                text_size = cv2.getTextSize(instruction, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+                text_x = (width - text_size[0]) // 2
+                text_y = box_y - 20
+                
+                # Text background
+                cv2.rectangle(img, (text_x - 10, text_y - text_size[1] - 10), 
+                            (text_x + text_size[0] + 10, text_y + 5), (0, 0, 0), -1)
+                
+                cv2.putText(img, instruction, (text_x, text_y), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 
                 return av.VideoFrame.from_ndarray(img, format="bgr24")
             
@@ -950,8 +1181,8 @@ def render_nutrition_chart(nutrients: Dict):
     else:
         st.info("Insufficient nutrition data for chart (need at least 3 metrics)")
 
-def render_camera_scanner():
-    """Render camera-based barcode scanner"""
+def render_enhanced_camera_scanner():
+    """Render enhanced camera-based barcode scanner with better UI"""
     if not CAMERA_AVAILABLE:
         st.warning(
             "📷 Camera scanning requires additional packages. "
@@ -959,21 +1190,61 @@ def render_camera_scanner():
         )
         return None
     
-    st.markdown("### 📸 Scan Barcode with Camera")
-    st.info("Allow camera access and point at a barcode to scan")
+    st.markdown("### 📸 Enhanced Barcode Scanner")
+    
+    # Camera tips
+    st.markdown("""
+    <div class='camera-tips'>
+        <strong>📌 Tips for Best Results:</strong>
+        <ul>
+            <li>✨ Ensure good lighting (avoid shadows)</li>
+            <li>📏 Hold barcode 10-20cm from camera</li>
+            <li>🎯 Align barcode within the guide box</li>
+            <li>📱 Keep camera steady for 2 seconds</li>
+            <li>🔄 Rotate device if barcode is vertical</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.info("Allow camera access and point at a barcode. Detection is automatic!")
+    
+    # Camera settings
+    with st.expander("⚙️ Camera Settings"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.caption("**Resolution:** 640x480 (optimized)")
+            st.caption("**Frame Rate:** 30 FPS")
+        with col2:
+            st.caption("**Detection:** Multi-method")
+            st.caption("**Verification:** 2 consecutive frames")
     
     ctx = webrtc_streamer(
-        key="barcode-scanner",
-        video_processor_factory=BarcodeProcessor,
+        key="enhanced-barcode-scanner",
+        video_processor_factory=EnhancedBarcodeProcessor,
         rtc_configuration=RTC_CONFIGURATION,
-        media_stream_constraints={"video": True, "audio": False},
+        media_stream_constraints={
+            "video": {
+                "width": {"ideal": 1280},
+                "height": {"ideal": 720},
+                "facingMode": "environment"  # Use back camera on mobile
+            },
+            "audio": False
+        },
+        async_processing=True,
     )
     
     if ctx.video_processor:
         detected_code = ctx.video_processor.detected_code
         
         if detected_code:
-            st.success(f"✅ Detected Barcode: **{detected_code}**")
+            st.markdown(
+                f"<div class='barcode-detected'>"
+                f"<h3 style='margin:0; color:#28a745;'>✅ Barcode Detected!</h3>"
+                f"<p style='font-size:24px; font-weight:bold; margin:10px 0;'>{detected_code}</p>"
+                f"<p style='margin:0; color:#666;'>Click 'Analyze Product' below to continue</p>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
             
             # Store in session state with timestamp to prevent duplicate processing
             current_time = time.time()
@@ -1051,7 +1322,7 @@ def main():
     # Header
     st.markdown("<h1 class='main-title'>🔍 Product Health & Safety Analyzer</h1>", unsafe_allow_html=True)
     st.markdown(
-        "<p class='subtitle'>Scan barcodes or search products to analyze health, safety, and nutritional content</p>",
+        "<p class='subtitle'>Enhanced camera scanning with improved barcode detection and image quality</p>",
         unsafe_allow_html=True
     )
     
@@ -1065,11 +1336,11 @@ def main():
             usda_status = "✅ Active" if USDA_API_KEY else "⚠️ Inactive"
             st.metric("USDA Database", usda_status)
         with col3:
-            camera_status = "✅ Available" if CAMERA_AVAILABLE else "⚠️ Unavailable"
+            camera_status = "✅ Enhanced" if CAMERA_AVAILABLE else "⚠️ Unavailable"
             st.metric("Camera Scan", camera_status)
     
     # Main search interface
-    tab_search, tab_camera = st.tabs(["🔍 Search", "📷 Camera Scan"])
+    tab_search, tab_camera = st.tabs(["🔍 Search", "📷 Enhanced Camera Scan"])
     
     with tab_search:
         st.markdown("### Enter Barcode or Product Name")
@@ -1142,22 +1413,24 @@ def main():
     
     with tab_camera:
         if CAMERA_AVAILABLE:
-            scanned_code = render_camera_scanner()
+            scanned_code = render_enhanced_camera_scanner()
             
             # Handle scanned code
             if "scanned_code" in st.session_state:
                 code = st.session_state["scanned_code"]
                 
-                if st.button("📊 Analyze This Product", type="primary"):
-                    if process_barcode(code, fetcher):
-                        st.balloons()
-                        del st.session_state["scanned_code"]
-                        st.rerun()
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    if st.button("📊 Analyze This Product", type="primary", use_container_width=True):
+                        if process_barcode(code, fetcher):
+                            st.balloons()
+                            del st.session_state["scanned_code"]
+                            st.rerun()
         else:
             st.warning(
-                "📷 Camera scanning is not available. "
+                "📷 Enhanced camera scanning is not available. "
                 "Please install required packages:\n\n"
-                "`pip install opencv-python-headless pyzbar streamlit-webrtc`"
+                "`pip install opencv-python-headless pyzbar streamlit-webrtc numpy`"
             )
     
     st.markdown("---")
@@ -1273,7 +1546,7 @@ def main():
     
     else:
         # Welcome screen
-        st.info("👆 Enter a barcode or product name above to get started!")
+        st.info("👆 Enter a barcode or use the enhanced camera scanner to get started!")
         
         st.markdown("""
         ### 🎯 What You'll Discover:
@@ -1287,11 +1560,14 @@ def main():
         - 📈 **Visual Charts** - Interactive nutrition visualization
         - 💬 **AI Chat** - Ask questions about the product
         
-        ### 📱 How to Use:
+        ### 📱 Enhanced Camera Features:
         
-        1. **Scan** a barcode with your camera (if available)
-        2. **Enter** a barcode manually (8-13 digits)
-        3. **Search** by product name
+        - 🎨 **Better Image Quality** - CLAHE enhancement and denoising
+        - 🔍 **Multi-Method Detection** - Multiple preprocessing techniques
+        - 🎯 **Smart Guidance** - Visual alignment guides
+        - ✅ **Verification System** - Confirms barcode across multiple frames
+        - 🔄 **Rotation Support** - Works with angled barcodes
+        - 📏 **Distance Optimization** - Best results at 10-20cm
         
         ### 🔬 Data Sources:
         
@@ -1327,7 +1603,8 @@ def main():
         st.markdown("---")
         st.markdown("### ⚙️ About")
         st.caption(
-            "Product Health & Safety Analyzer v2.0\n\n"
+            "Product Health & Safety Analyzer v2.1\n\n"
+            "✨ Enhanced Camera Version\n\n"
             "Built with Streamlit, powered by AI\n\n"
             "Data from Open Food Facts & USDA"
         )

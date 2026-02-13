@@ -6,6 +6,13 @@
 if (localStorage.getItem('isLoggedIn') !== 'true') {
     window.location.href = 'login.html';
 }
+// Barcode to Product Mapping
+const barcodeMap = {
+    "8901058893227": "Instant Noodles",     // Example Maggi barcode
+    "7622210449283": "Dark Chocolate Bar",  // Example chocolate
+    "070177154020": "Organic Green Tea",
+    "025293001152": "Almond Milk"
+};
 
 // Product Database with Complete Analysis
 const productDatabase = {
@@ -120,12 +127,21 @@ const productDatabase = {
 
 // Load product on page load
 window.addEventListener('load', function() {
-    const selectedProduct = localStorage.getItem('selectedProduct') || 'Dark Chocolate Bar';
-    
+
+    const scannedBarcode = localStorage.getItem('scannedBarcode');
+    let selectedProduct;
+
+    if (scannedBarcode && barcodeMap[scannedBarcode]) {
+        selectedProduct = barcodeMap[scannedBarcode];
+    } else {
+        selectedProduct = localStorage.getItem('selectedProduct') || 'Dark Chocolate Bar';
+    }
+
     setTimeout(() => {
         loadProduct(selectedProduct);
-    }, 1500); // Simulate analysis time
+    }, 1500);
 });
+
 
 function loadProduct(productName) {
     const product = productDatabase[productName];
