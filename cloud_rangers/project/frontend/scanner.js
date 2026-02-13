@@ -1,35 +1,35 @@
-document.addEventListener("DOMContentLoaded", function () {
+function transformOpenFoodData(product) {
 
-    Quagga.init({
-        inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: document.querySelector('#scanner')
-        },
-        decoder: {
-            readers: ["ean_reader", "upc_reader"]
-        }
-    }, function (err) {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        Quagga.start();
-    });
+    return {
+        name: product.product_name || "Unknown Product",
+        brand: product.brands || "Unknown Brand",
+        ingredients: product.ingredients_text || "",
+        nutrition: product.nutriments || {},
+        additives: product.additives_tags || [],
+        nutriscore: product.nutriscore_grade || "unknown",
+        allergens: product.allergens || ""
+    };
+}
 
-    Quagga.onDetected(function (data) {
-        const code = data.codeResult.code;
+window.addEventListener('load', function () {
 
-        console.log("Scanned:", code);
+    const openFoodData = localStorage.getItem("openFoodProduct");
 
-        localStorage.setItem("scannedBarcode", code);
+    if (openFoodData) {
 
-        Quagga.stop();
+        const parsedData = JSON.parse(openFoodData);
+        const transformed = transformOpenFoodData(parsedData);
 
-        window.location.href = "product.html";
-    });
+        loadDynamicProduct(transformed);
+
+    } else {
+
+        const selectedProduct = localStorage.getItem('selectedProduct') || 'Dark Chocolate Bar';
+        loadProduct(selectedProduct);
+    }
 
 });
+
 
 Quagga.onDetected(async function (data) {
 
@@ -62,3 +62,14 @@ Quagga.onDetected(async function (data) {
     }
 
 });
+function loadDynamicProduct(product) {
+
+    document.getElementById("product-name").innerText = product.name;
+    document.getElementById("brand-name").innerText = product.brand;
+
+    // Example: show ingredients
+    document.getElementById("ingredients").innerText = product.ingredients;
+
+    // Call your scoring engine
+    evaluateProduct(product);
+}
