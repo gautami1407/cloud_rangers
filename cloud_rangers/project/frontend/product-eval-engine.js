@@ -43,6 +43,11 @@ window.addEventListener("load", function () {
     fetchNews(product.name);
 
     localStorage.removeItem("openFoodProduct");
+    document.getElementById("fetch-barcode-btn").addEventListener("click", () => {
+    const barcode = document.getElementById("barcode-input").value.trim();
+    fetchProductByBarcode(barcode);
+});
+
 });
 
 // ============================================
@@ -230,3 +235,28 @@ function displayNews(newsList) {
     });
 }
 
+async function fetchProductByBarcode(barcode) {
+    if (!barcode) {
+        alert("Please enter a barcode.");
+        return;
+    }
+
+    try {
+        // Open Food Facts API
+        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        const data = await res.json();
+
+        if (!data.product || data.status !== 1) {
+            showError("Product not found for this barcode.");
+            return;
+        }
+
+        const product = transformOpenFoodData(data.product);
+        renderDynamicProduct(product);
+        fetchNews(product.name);
+
+    } catch (err) {
+        console.error("Error fetching product:", err);
+        showError("Failed to fetch product. Try again.");
+    }
+}
