@@ -156,7 +156,8 @@
             line-height: 1.1;
             margin-bottom: 1.5rem;
             background: linear-gradient(135deg, var(--primary) 0%, #059669 100%);
-            -webkit-background-clip: text;
+            -webkit-background-clip: text; /* for older Chrome/Safari */
+            background-clip: text;         /* standard property */
             -webkit-text-fill-color: transparent;
             animation: fadeInUp 0.8s ease;
         }
