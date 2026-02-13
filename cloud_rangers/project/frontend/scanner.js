@@ -30,3 +30,35 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
+
+Quagga.onDetected(async function (data) {
+
+    const barcode = data.codeResult.code;
+    console.log("Scanned:", barcode);
+
+    Quagga.stop();
+
+    try {
+        const response = await fetch(
+            `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
+        );
+
+        const result = await response.json();
+
+        if (result.status === 1) {
+
+            // Store full product data
+            localStorage.setItem("openFoodProduct", JSON.stringify(result.product));
+
+            window.location.href = "product.html";
+
+        } else {
+            alert("Product not found in Open Food Facts database.");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Error fetching product data.");
+    }
+
+});
