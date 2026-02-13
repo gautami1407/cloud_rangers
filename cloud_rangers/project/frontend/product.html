@@ -3,6 +3,104 @@
 <head>
     <title>Product Evaluation</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .product-wrapper {
+    max-width: 1000px;
+    margin: 2rem auto;
+    font-family: 'Inter', sans-serif;
+}
+
+.product-header-card {
+    display: flex;
+    gap: 2rem;
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    align-items: center;
+}
+
+.product-img {
+    width: 140px;
+    border-radius: 12px;
+}
+
+.product-placeholder {
+    font-size: 80px;
+}
+
+.product-title {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.product-brand {
+    color: #6B7280;
+    margin-bottom: 1rem;
+}
+
+.concern-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.concern-badge.low {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.concern-badge.moderate {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.concern-badge.high {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.info-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.nutrition-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.allergen-danger {
+    color: #DC2626;
+    font-weight: 600;
+}
+
+.allergen-safe {
+    color: #059669;
+    font-weight: 600;
+}
+
+.footer-note {
+    margin-top: 2rem;
+    padding: 1rem;
+    text-align: center;
+    background: #EFF6FF;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+    </style>
 </head>
 <body>
 
@@ -18,17 +116,6 @@
     <div class="product-brand" id="brand-name"></div>
     <h1 class="product-name" id="product-name"></h1>
     <p class="product-description" id="product-description"></p>
-
-    <div class="overall-score">
-        Overall Score:
-        <span id="nutri-score">-</span>
-    </div>
-
-    <h3>Ingredients</h3>
-    <ul id="ingredients-list"></ul>
-
-    <h3>Allergens</h3>
-    <div id="allergen-section"></div>
 
 </div>
 

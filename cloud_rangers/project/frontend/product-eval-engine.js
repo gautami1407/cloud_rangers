@@ -67,69 +67,79 @@ function generateProductHTML(product) {
     const concernData = calculateConcern(product);
 
     return `
-        <div class="product-header">
-            <div class="product-main">
-                <div class="product-image">
+        <div class="product-wrapper">
+
+            <!-- HEADER -->
+            <div class="product-header-card">
+                <div class="product-left">
                     ${product.image 
-                        ? `<img src="${product.image}" style="max-width:120px;">`
-                        : "📦"}
+                        ? `<img src="${product.image}" class="product-img">`
+                        : `<div class="product-placeholder">📦</div>`
+                    }
                 </div>
-                <div class="product-details">
-                    <div class="product-brand">${product.brand}</div>
-                    <h1 class="product-name">${product.name}</h1>
-                    <span class="product-category">Scanned Product</span>
+                <div class="product-right">
+                    <h1 class="product-title">${product.name}</h1>
+                    <p class="product-brand">${product.brand}</p>
+                    <div class="concern-badge ${concernData.level}">
+                        ${concernData.label} • Score ${concernData.score}/100
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="concern-score-card">
-            <h2>Concern Score: ${concernData.score}</h2>
-            <p><strong>${concernData.label}</strong></p>
-            <p>${concernData.explanation}</p>
-        </div>
+            <!-- GRID SECTIONS -->
+            <div class="product-grid">
 
-        <div class="factor-card">
-            <h3>Ingredients</h3>
-            ${
-                product.ingredientsList.length > 0
-                ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>`
-                : `<p>${product.ingredientsText}</p>`
-            }
-        </div>
+                <!-- INGREDIENTS -->
+                <div class="info-card">
+                    <h3>Ingredients</h3>
+                    ${
+                        product.ingredientsList.length > 0
+                        ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>`
+                        : `<p>${product.ingredientsText}</p>`
+                    }
+                </div>
 
-        <div class="factor-card">
-            <h3>Nutrition (per 100g)</h3>
-            <ul>
-                <li>Energy: ${product.nutriments["energy-kcal_100g"] || "N/A"} kcal</li>
-                <li>Sugar: ${product.nutriments.sugars_100g || "N/A"} g</li>
-                <li>Fat: ${product.nutriments.fat_100g || "N/A"} g</li>
-                <li>Salt: ${product.nutriments.salt_100g || "N/A"} g</li>
-            </ul>
-        </div>
+                <!-- NUTRITION -->
+                <div class="info-card">
+                    <h3>Nutrition (per 100g)</h3>
+                    <div class="nutrition-grid">
+                        <div><strong>Energy</strong><br>${product.nutriments["energy-kcal_100g"] || "N/A"} kcal</div>
+                        <div><strong>Sugar</strong><br>${product.nutriments.sugars_100g || "N/A"} g</div>
+                        <div><strong>Fat</strong><br>${product.nutriments.fat_100g || "N/A"} g</div>
+                        <div><strong>Salt</strong><br>${product.nutriments.salt_100g || "N/A"} g</div>
+                    </div>
+                </div>
 
-        <div class="factor-card">
-            <h3>Additives</h3>
-            ${
-                product.additives.length > 0
-                ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>`
-                : `<p>No additives listed</p>`
-            }
-        </div>
+                <!-- ADDITIVES -->
+                <div class="info-card">
+                    <h3>Additives</h3>
+                    ${
+                        product.additives.length > 0
+                        ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>`
+                        : `<p>No additives reported</p>`
+                    }
+                </div>
 
-        <div class="factor-card">
-            <h3>Allergens</h3>
-            ${
-                product.allergens
-                ? `<span style="color:red;">${product.allergens}</span>`
-                : `<span style="color:green;">No allergens reported</span>`
-            }
-        </div>
+                <!-- ALLERGENS -->
+                <div class="info-card">
+                    <h3>Allergens</h3>
+                    ${
+                        product.allergens
+                        ? `<p class="allergen-danger">${product.allergens}</p>`
+                        : `<p class="allergen-safe">No allergens reported</p>`
+                    }
+                </div>
 
-        <div style="margin-top:2rem;padding:1rem;background:#EFF6FF;border-radius:12px;">
-            Data sourced live from OpenFoodFacts.
+            </div>
+
+            <div class="footer-note">
+                Data sourced live from OpenFoodFacts.
+            </div>
+
         </div>
     `;
 }
+
 
 
 // ============================================
