@@ -398,7 +398,7 @@
             <form id="registerForm" novalidate>
                 <div class="mb-3">
                     <label for="fullName" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="fullName" placeholder="Enter full name" required>
+                    <input type="text" class="form-control" id="fullName" placeholder="John Doe" required>
                     <div class="invalid-feedback validation-message">
                         Please enter your full name (at least 2 characters)
                     </div>
@@ -667,17 +667,16 @@
                 
                 console.log('Registration data:', formData);
                 
-                // Store user data (demo purposes)
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', formData.email);
-                localStorage.setItem('userName', formData.fullName);
+                // Store registration data temporarily (NOT logged in yet)
+                localStorage.setItem('pendingUser', JSON.stringify(formData));
+                // Do NOT set isLoggedIn here - user must login first
                 
-                // Show success and redirect
+                // Show success and redirect to LOGIN
                 submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Success!';
                 submitBtn.disabled = true;
                 
                 setTimeout(() => {
-                    window.location.href = 'survey.html';
+                    window.location.href = 'login.html?registered=true';
                 }, 1000);
             }
         });

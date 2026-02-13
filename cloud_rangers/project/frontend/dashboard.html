@@ -488,7 +488,7 @@
                 <i class="bi bi-house-door"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="#" class="menu-item" onclick="initiateScan()">
+            <a href="#" class="menu-item" onclick="event.preventDefault(); initiateScan();">
                 <i class="bi bi-upc-scan"></i>
                 <span>Scan Product</span>
             </a>
@@ -496,7 +496,7 @@
                 <i class="bi bi-chat-dots"></i>
                 <span>AI Nutrition Chat</span>
             </a>
-            <a href="#" class="menu-item">
+            <a href="#" class="menu-item" onclick="event.preventDefault(); viewScanHistory();">
                 <i class="bi bi-clock-history"></i>
                 <span>Scan History</span>
             </a>
@@ -504,7 +504,7 @@
                 <i class="bi bi-person"></i>
                 <span>My Profile</span>
             </a>
-            <a href="#" class="menu-item">
+            <a href="#" class="menu-item" onclick="event.preventDefault(); alert('Settings feature coming soon!');">
                 <i class="bi bi-gear"></i>
                 <span>Settings</span>
             </a>
@@ -531,7 +531,7 @@
                 <div class="user-avatar" id="userAvatar">U</div>
                 <div class="user-info">
                     <h5 id="userNameFull">User</h5>
-                    <p id="userEmail">user@email.com</p>
+                    <p id="userEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fd888e988fbd98909c9491d39e9290">[email&#160;protected]</a></p>
                 </div>
             </div>
         </div>
@@ -594,7 +594,7 @@
         </div>
         
         <div class="recent-scans">
-            <div class="scan-card" onclick="window.location.href='product.html'">
+            <div class="scan-card" onclick="viewProduct('Dark Chocolate Bar')">
                 <div class="scan-card-header">
                     <div class="product-image">🍫</div>
                     <div class="product-info">
@@ -608,7 +608,7 @@
                 </div>
             </div>
             
-            <div class="scan-card" onclick="window.location.href='product.html'">
+            <div class="scan-card" onclick="viewProduct('Organic Green Tea')">
                 <div class="scan-card-header">
                     <div class="product-image">🥤</div>
                     <div class="product-info">
@@ -622,7 +622,7 @@
                 </div>
             </div>
             
-            <div class="scan-card" onclick="window.location.href='product.html'">
+            <div class="scan-card" onclick="viewProduct('Chocolate Chip Cookies')">
                 <div class="scan-card-header">
                     <div class="product-image">🍪</div>
                     <div class="product-info">
@@ -636,7 +636,7 @@
                 </div>
             </div>
             
-            <div class="scan-card" onclick="window.location.href='product.html'">
+            <div class="scan-card" onclick="viewProduct('Instant Noodles')">
                 <div class="scan-card-header">
                     <div class="product-image">🥫</div>
                     <div class="product-info">
@@ -650,7 +650,7 @@
                 </div>
             </div>
             
-            <div class="scan-card" onclick="window.location.href='product.html'">
+            <div class="scan-card" onclick="viewProduct('Almond Milk')">
                 <div class="scan-card-header">
                     <div class="product-image">🥛</div>
                     <div class="product-info">
@@ -664,7 +664,7 @@
                 </div>
             </div>
             
-            <div class="scan-card" onclick="window.location.href='product.html'">
+            <div class="scan-card" onclick="viewProduct('Whole Wheat Bread')">
                 <div class="scan-card-header">
                     <div class="product-image">🍞</div>
                     <div class="product-info">
@@ -690,8 +690,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" style="padding: 1rem 2rem 2rem;">
-                    <input type="text" class="form-control" placeholder="Enter product name or barcode..." style="border: 2px solid #E5E7EB; border-radius: 12px; padding: 0.85rem 1rem;">
-                    <button class="btn btn-primary-custom mt-3" style="background: linear-gradient(135deg, var(--primary) 0%, #059669 100%); border: none; padding: 0.75rem 2rem; border-radius: 50px; width: 100%;" onclick="window.location.href='product.html'">
+                    <input type="text" class="form-control" id="productSearchInput" placeholder="Enter product name or barcode..." style="border: 2px solid #E5E7EB; border-radius: 12px; padding: 0.85rem 1rem;">
+                    <div id="searchResults" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;"></div>
+                    <button class="btn btn-primary-custom mt-3" style="background: linear-gradient(135deg, var(--primary) 0%, #059669 100%); border: none; padding: 0.75rem 2rem; border-radius: 50px; width: 100%;" onclick="performSearch()">
                         <i class="bi bi-search me-2"></i>Search
                     </button>
                 </div>
@@ -699,8 +700,31 @@
         </div>
     </div>
     
+    <!-- Scanner Modal -->
+    <div class="modal fade" id="scannerModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 20px; border: none;">
+                <div class="modal-header" style="border: none; padding: 2rem 2rem 1rem;">
+                    <h5 class="modal-title" style="font-family: 'Fraunces', serif; font-weight: 700;">Scanning Barcode...</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center" style="padding: 2rem;">
+                    <div style="width: 200px; height: 200px; margin: 0 auto; background: linear-gradient(135deg, #F0FDF4 0%, #D1FAE5 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-upc-scan" style="font-size: 5rem; color: var(--primary); animation: pulse 1.5s ease-in-out infinite;"></i>
+                    </div>
+                    <p class="mt-4" style="color: #6B7280; font-size: 1.1rem;">Point your camera at the product barcode</p>
+                    <div class="mt-3">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Scanning...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
         // Load user data
@@ -740,7 +764,7 @@
             
             // Demo: redirect to product page
             setTimeout(() => {
-                window.location.href = 'product.html';
+                window.location.href = 'product-new.html';
             }, 500);
         }
         
@@ -751,12 +775,3 @@
                 window.location.href = 'index.html';
             }
         }
-        
-        // Check if user is logged in
-        if (localStorage.getItem('isLoggedIn') !== 'true') {
-            window.location.href = 'login.html';
-        }
-    </script>
-    
-</body>
-</html>

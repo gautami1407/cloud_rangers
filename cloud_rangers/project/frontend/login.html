@@ -400,6 +400,15 @@
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
         
+        // Check if redirected from registration
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('registered') === 'true') {
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = 'background: #D1FAE5; color: #059669; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; text-align: center;';
+            successMsg.innerHTML = '<i class="bi bi-check-circle me-2"></i>Registration successful! Please login to continue.';
+            loginForm.parentElement.insertBefore(successMsg, loginForm);
+        }
+        
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -422,29 +431,41 @@
                 return;
             }
             
-            // Hide error message
-            errorMessage.style.display = 'none';
+            // Check if user exists (in real app, this would be API call)
+            const pendingUser = JSON.parse(localStorage.getItem('pendingUser') || '{}');
             
-            // Demo login (in real app, this would call an API)
-            console.log('Login attempt:', {
-                email: email,
-                password: passwordValue,
-                rememberMe: rememberMe
-            });
-            
-            // Store demo user data
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', email);
-            
-            // Check if user has completed survey
-            const userProfile = localStorage.getItem('userProfile');
-            
-            if (userProfile) {
-                // Redirect to dashboard
-                window.location.href = 'dashboard.html';
+            // Simple demo authentication
+            if (pendingUser.email === email) {
+                // Authentication successful
+                errorMessage.style.display = 'none';
+                
+                // Set authenticated session
+                const sessionData = {
+                    isLoggedIn: true,
+                    userEmail: pendingUser.email,
+                    userName: pendingUser.fullName,
+                    loginTime: new Date().toISOString()
+                };
+                
+                localStorage.setItem('session', JSON.stringify(sessionData));
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userEmail', pendingUser.email);
+                localStorage.setItem('userName', pendingUser.fullName);
+                
+                // Check if user has completed health profile
+                const userProfile = localStorage.getItem('userProfile');
+                
+                if (userProfile) {
+                    // Has profile - go to dashboard
+                    window.location.href = 'dashboard.html';
+                } else {
+                    // No profile - redirect to survey
+                    window.location.href = 'survey.html?firsttime=true';
+                }
             } else {
-                // Redirect to survey
-                window.location.href = 'survey.html';
+                // Authentication failed
+                errorText.textContent = 'Invalid email or password. Please check your credentials or register first.';
+                errorMessage.style.display = 'block';
             }
         });
         
@@ -454,11 +475,19 @@
         googleLogin.addEventListener('click', function() {
             console.log('Google login clicked');
             // In a real app, this would initiate OAuth flow
-            alert('Google OAuth integration would be implemented here');
             
-            // Demo: simulate successful login
+            // Demo: simulate successful OAuth
+            const sessionData = {
+                isLoggedIn: true,
+                userEmail: 'user@gmail.com',
+                userName: 'Google User',
+                loginTime: new Date().toISOString()
+            };
+            
+            localStorage.setItem('session', JSON.stringify(sessionData));
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userEmail', 'user@gmail.com');
+            localStorage.setItem('userName', 'Google User');
             
             // Check if user has completed survey
             const userProfile = localStorage.getItem('userProfile');
@@ -466,7 +495,7 @@
             if (userProfile) {
                 window.location.href = 'dashboard.html';
             } else {
-                window.location.href = 'survey.html';
+                window.location.href = 'survey.html?firsttime=true';
             }
         });
         
