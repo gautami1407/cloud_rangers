@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details - Label Padegha Sabh</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Spectral:wght@600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard-styles.css">
+    <link rel="stylesheet" href="product-styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-container">
+                <i class="bi bi-upc-scan brand-icon"></i>
+                <span class="brand-text">LPS</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item">
+                <i class="bi bi-grid"></i><span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item active">
+                <i class="bi bi-upc-scan"></i><span>Product Details</span>
+            </a>
+            <a href="ai-chat.html" class="nav-item">
+                <i class="bi bi-chat-dots"></i><span>AI Chat</span>
+            </a>
+            <a href="health-profile.html" class="nav-item">
+                <i class="bi bi-person-circle"></i><span>Health Profile</span>
+            </a>
+            <a href="#" class="nav-item" onclick="logout()">
+                <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <nav class="top-navbar">
+            <div class="navbar-left">
+                <button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button>
+                <h1 class="page-title">Product Analysis</h1>
+            </div>
+            <div class="navbar-right">
+                <a href="dashboard.html" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </nav>
+
+        <div class="dashboard-container">
+            <!-- Product Header Card -->
+            <div class="product-header-card">
+                <div class="product-image-large">
+                    <img src="https://via.placeholder.com/400x400/10B981/FFFFFF?text=Product+Image" alt="Product">
+                </div>
+                <div class="product-header-info">
+                    <h1 class="product-title">Sample Packaged Snack</h1>
+                    <p class="product-brand-large">Brand Name Ltd.</p>
+                    <div class="product-meta">
+                        <span><i class="bi bi-upc"></i> Barcode: 8901234567890</span>
+                        <span><i class="bi bi-box"></i> Category: Snacks</span>
+                    </div>
+                    <div class="concern-score-display">
+                        <div class="score-circle score-medium">
+                            <span class="score-number">68</span>
+                            <span class="score-label">Concern Score</span>
+                        </div>
+                        <div class="score-description">
+                            <h4>Moderate Concern</h4>
+                            <p>This product contains ingredients that warrant attention based on your profile.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Six-Factor Breakdown -->
+            <div class="section-header mt-5">
+                <h2 class="section-title">Six-Factor Intelligence Analysis</h2>
+            </div>
+
+            <div class="factors-grid">
+                <!-- Factor 1: Concern Score -->
+                <div class="factor-detail-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-lg">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h3>Factor 1: Concern Score</h3>
+                            <p class="factor-subtitle">Quantitative risk indicator (0–100)</p>
+                        </div>
+                    </div>
+                    <div class="factor-body">
+                        <div class="progress-bar-custom mb-3">
+                            <div class="progress-fill" style="width: 68%; background: linear-gradient(90deg, #F59E0B, #D97706);"></div>
+                        </div>
+                        <p>Based on ingredient composition, usage context, and known risk factors, this product scores <strong>68/100</strong>. This indicates moderate concern primarily due to preservatives and artificial additives.</p>
+                        <div class="alert alert-warning mt-3">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Note:</strong> This is not a safety certification. It's a decision-support metric.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factor 2: Ingredient Purpose -->
+                <div class="factor-detail-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-lg">
+                            <i class="bi bi-clipboard-data"></i>
+                        </div>
+                        <div>
+                            <h3>Factor 2: Ingredient Purpose Analysis</h3>
+                            <p class="factor-subtitle">Why each additive is used</p>
+                        </div>
+                    </div>
+                    <div class="factor-body">
+                        <div class="ingredient-list">
+                            <div class="ingredient-item">
+                                <strong>Sodium Benzoate (E211)</strong>
+                                <p>Preservative to prevent microbial growth and extend shelf life.</p>
+                            </div>
+                            <div class="ingredient-item">
+                                <strong>Tartrazine (E102)</strong>
+                                <p>Synthetic yellow coloring agent for visual appeal.</p>
+                            </div>
+                            <div class="ingredient-item">
+                                <strong>Monosodium Glutamate (MSG)</strong>
+                                <p>Flavor enhancer to intensify umami taste.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factor 3: Global Regulatory Status -->
+                <div class="factor-detail-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-lg">
+                            <i class="bi bi-globe-americas"></i>
+                        </div>
+                        <div>
+                            <h3>Factor 3: Global Regulatory Status</h3>
+                            <p class="factor-subtitle">Cross-country compliance comparison</p>
+                        </div>
+                    </div>
+                    <div class="factor-body">
+                        <div class="regulatory-grid">
+                            <div class="regulatory-item approved">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <div>
+                                    <strong>FSSAI (India)</strong>
+                                    <p>Approved with limits</p>
+                                </div>
+                            </div>
+                            <div class="regulatory-item approved">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <div>
+                                    <strong>FDA (USA)</strong>
+                                    <p>Generally Recognized as Safe</p>
+                                </div>
+                            </div>
+                            <div class="regulatory-item warning">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                                <div>
+                                    <strong>EFSA (EU)</strong>
+                                    <p>Restricted usage levels</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factor 4: Additive & Chemical Context -->
+                <div class="factor-detail-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-lg">
+                            <i class="bi bi-book"></i>
+                        </div>
+                        <div>
+                            <h3>Factor 4: Additive Context</h3>
+                            <p class="factor-subtitle">Scientific background in plain language</p>
+                        </div>
+                    </div>
+                    <div class="factor-body">
+                        <p><strong>Sodium Benzoate:</strong> Widely used preservative. Some studies link high doses to hyperactivity in children. ADI (Acceptable Daily Intake): 5 mg/kg body weight.</p>
+                        <p><strong>Tartrazine:</strong> Synthetic azo dye. May cause allergic reactions in sensitive individuals, particularly those with aspirin intolerance.</p>
+                        <p><strong>MSG:</strong> Common flavor enhancer. Scientific consensus finds it safe, but some report sensitivity symptoms.</p>
+                    </div>
+                </div>
+
+                <!-- Factor 5: User-Specific Warnings -->
+                <div class="factor-detail-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-lg">
+                            <i class="bi bi-person-exclamation"></i>
+                        </div>
+                        <div>
+                            <h3>Factor 5: Personal Warnings</h3>
+                            <p class="factor-subtitle">Tailored to your health profile</p>
+                        </div>
+                    </div>
+                    <div class="factor-body">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Allergy Alert:</strong> Contains soy-derived ingredients. You indicated soy allergy in your profile.
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Age Consideration:</strong> High sodium content may not be suitable for children under 5.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factor 6: News & Recalls -->
+                <div class="factor-detail-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-lg">
+                            <i class="bi bi-newspaper"></i>
+                        </div>
+                        <div>
+                            <h3>Factor 6: News & Recall Alerts</h3>
+                            <p class="factor-subtitle">Verified safety information</p>
+                        </div>
+                    </div>
+                    <div class="factor-body">
+                        <div class="news-item">
+                            <div class="news-date">Jan 15, 2026</div>
+                            <strong>No Active Recalls</strong>
+                            <p>This product has no current recall notices from FSSAI or manufacturer.</p>
+                        </div>
+                        <div class="news-item">
+                            <div class="news-date">Dec 2025</div>
+                            <strong>Regulatory Update</strong>
+                            <p>FSSAI updated sodium limits for packaged snacks. This product complies with new standards.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat CTA -->
+            <div class="ai-chat-cta-card">
+                <div class="cta-content">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    <div>
+                        <h3>Have Questions About This Product?</h3>
+                        <p>Ask our AI nutrition assistant for personalized insights</p>
+                    </div>
+                </div>
+                <a href="ai-chat.html?product=sample-snack" class="btn btn-primary btn-lg">
+                    <i class="bi bi-robot"></i> Ask AI
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
