@@ -40,6 +40,7 @@ window.addEventListener("load", function () {
     const product = transformOpenFoodData(rawProduct);
 
     renderDynamicProduct(product);
+    fetchNews(product.name);
 
     localStorage.removeItem("openFoodProduct");
 });
@@ -184,3 +185,48 @@ function showError(message) {
         </div>
     `;
 }
+// ============================================
+// FETCH PRODUCT SAFETY NEWS
+// ============================================
+async function fetchNews(productName) {
+    try {
+        const res = await fetch("http://127.0.0.1:8000/news", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ product_name: productName })
+        });
+        const data = await res.json();
+        if (data.news && data.news.length > 0) {
+            displayNews(data.news);
+        } else {
+            displayNews([]); // show empty state
+        }
+    } catch (err) {
+        console.error("Error fetching news:", err);
+        displayNews([]);
+    }
+}
+
+function displayNews(newsList) {
+    const container = document.getElementById("news-section");
+    container.innerHTML = "";
+
+    if (!newsList || newsList.length === 0) {
+        container.innerHTML = `<p>No recent safety alerts found for this product.</p>`;
+        return;
+    }
+
+    newsList.forEach(n => {
+        container.innerHTML += `
+            <div class="news-card">
+                <img src="${n.thumbnail}" class="news-image" onerror="this.src='https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=80'"/>
+                <div>
+                    <div class="news-meta">${n.source} • ${n.date}</div>
+                    <div class="news-title">${n.title}</div>
+                    <a href="${n.link}" target="_blank">Read More</a>
+                </div>
+            </div>
+        `;
+    });
+}
+
