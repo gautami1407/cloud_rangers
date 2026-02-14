@@ -28,46 +28,23 @@ function transformOpenFoodData(product) {
 // MAIN LOAD
 // ============================================
 window.addEventListener("DOMContentLoaded", () => {
+    // If a product is stored from a previous scan
     const storedProduct = localStorage.getItem("openFoodProduct");
 
     if (storedProduct) {
         const rawProduct = JSON.parse(storedProduct);
-        const product = transformOpenFoodData(rawProduct);
-        renderDynamicProduct(product);
-        fetchNews(product.name);
+        processProduct(rawProduct);
         localStorage.removeItem("openFoodProduct");
     }
 
-    setupManualSearch();
-    setupBarcodeSearch();
+    // Setup barcode scan button
+    setupBarcodeScan();
 });
 
 // ============================================
-// MANUAL SEARCH
+// BARCODE SCAN SETUP
 // ============================================
-function setupManualSearch() {
-    const manualInput = document.getElementById("manualInput");
-    const searchBtn = document.getElementById("searchBtn");
-
-    if (!manualInput || !searchBtn) return;
-
-    const searchHandler = async () => {
-        const query = manualInput.value.trim();
-        if (!query) return showError("Please enter a product name or barcode.");
-        await fetchProductDetails(query);
-        fetchNews(query);
-    };
-
-    searchBtn.addEventListener("click", searchHandler);
-    manualInput.addEventListener("keypress", e => {
-        if (e.key === "Enter") searchHandler();
-    });
-}
-
-// ============================================
-// BARCODE SEARCH (MAIN PROJECT FEATURE)
-// ============================================
-function setupBarcodeSearch() {
+function setupBarcodeScan() {
     const barcodeInput = document.getElementById("barcode-input");
     const fetchBtn = document.getElementById("fetch-barcode-btn");
 
@@ -77,7 +54,6 @@ function setupBarcodeSearch() {
         const barcode = barcodeInput.value.trim();
         if (!barcode) return showError("Please enter a barcode.");
         await fetchProductByBarcode(barcode);
-        fetchNews(barcode);
     };
 
     fetchBtn.addEventListener("click", barcodeHandler);
@@ -87,26 +63,26 @@ function setupBarcodeSearch() {
 }
 
 // ============================================
-// FETCH PRODUCT BY NAME OR BARCODE
+// FETCH PRODUCT BY BARCODE
 // ============================================
-async function fetchProductDetails(query) {
-    const container = document.getElementById('productContainer');
+async function fetchProductByBarcode(barcode) {
     const loading = document.getElementById("loadingContainer");
+    const container = document.getElementById("productContainer");
 
     if (loading) loading.style.display = "block";
     if (container) container.style.display = "none";
     container.innerHTML = '';
 
     try {
-        const response = await fetch(`https://your-backend-api.com/product?query=${encodeURIComponent(query)}`);
+        // Fetch product from backend
+        const response = await fetch(`https://your-backend-api.com/product?query=${encodeURIComponent(barcode)}`);
         const data = await response.json();
 
         if (!data || Object.keys(data).length === 0) {
-            return showError("No product details found.");
+            return showError("No product details found for this barcode.");
         }
 
-        const product = transformOpenFoodData(data);
-        renderDynamicProduct(product);
+        processProduct(data);
 
     } catch (err) {
         console.error(err);
@@ -117,30 +93,75 @@ async function fetchProductDetails(query) {
 }
 
 // ============================================
-// FETCH PRODUCT BY BARCODE (calls same as fetchProductDetails)
+// PROCESS PRODUCT (Render + AI + News)
 // ============================================
-async function fetchProductByBarcode(barcode) {
-    return fetchProductDetails(barcode);
+async function processProduct(rawProduct) {
+    const product = transformOpenFoodData(rawProduct);
+
+    // Call AI ingredient analyzer
+    const aiAnalysis = await analyzeIngredientsAI(product);
+
+    // Render product
+    renderDynamicProduct(product, aiAnalysis);
+
+    // Fetch news related to product
+    fetchNews(product.name);
+}
+
+// ============================================
+// CALL AI INGREDIENT ANALYZER
+// ============================================
+async function analyzeIngredientsAI(product) {
+    if (!product.ingredientsList || product.ingredientsList.length === 0) return null;
+
+    try {
+        const response = await fetch("http://127.0.0.1:8000/analyze-ingredients", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ingredients: product.ingredientsList })
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        console.error("Error analyzing ingredients AI:", err);
+        return null;
+    }
 }
 
 // ============================================
 // RENDER PRODUCT
 // ============================================
-function renderDynamicProduct(product) {
-    const loading = document.getElementById("loadingContainer");
+function renderDynamicProduct(product, aiAnalysis) {
     const container = document.getElementById("productContainer");
+    const loading = document.getElementById("loadingContainer");
 
     if (loading) loading.style.display = "none";
     if (container) container.style.display = "block";
 
-    container.innerHTML = generateProductHTML(product);
+    container.innerHTML = generateProductHTML(product, aiAnalysis);
 }
 
 // ============================================
 // GENERATE PRODUCT HTML
 // ============================================
-function generateProductHTML(product) {
+function generateProductHTML(product, aiAnalysis) {
     const concernData = calculateConcern(product);
+
+    let aiHTML = "";
+    if (aiAnalysis) {
+        aiHTML = `
+        <div class="info-card">
+            <h3>AI Ingredient Analysis</h3>
+            <p><strong>Overall Health Risk:</strong> ${aiAnalysis.overall_health_risk}</p>
+            ${aiAnalysis.high_risk_ingredients.length > 0 
+                ? `<p><strong>High Risk Ingredients:</strong> ${aiAnalysis.high_risk_ingredients.join(", ")}</p>` 
+                : ""}
+            ${aiAnalysis.comments && aiAnalysis.comments.length > 0 
+                ? `<ul>${aiAnalysis.comments.map(c => `<li>${c}</li>`).join("")}</ul>` 
+                : ""}
+        </div>`;
+    }
 
     return `
         <div class="product-wrapper">
@@ -191,6 +212,8 @@ function generateProductHTML(product) {
                     ${product.allergens ? `<p class="allergen-danger">${product.allergens}</p>` : `<p class="allergen-safe">No allergens reported</p>`}
                 </div>
 
+                <!-- AI Analysis -->
+                ${aiHTML}
             </div>
 
             <div class="footer-note">Data sourced live from OpenFoodFacts.</div>
