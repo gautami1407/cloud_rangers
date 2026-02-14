@@ -43,7 +43,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // ============================================
-// SETUP MANUAL SEARCH
+// MANUAL SEARCH
 // ============================================
 function setupManualSearch() {
     const manualInput = document.getElementById("manualInput");
@@ -65,7 +65,7 @@ function setupManualSearch() {
 }
 
 // ============================================
-// SETUP BARCODE SEARCH
+// BARCODE SEARCH (MAIN PROJECT FEATURE)
 // ============================================
 function setupBarcodeSearch() {
     const barcodeInput = document.getElementById("barcode-input");
@@ -87,7 +87,7 @@ function setupBarcodeSearch() {
 }
 
 // ============================================
-// FETCH PRODUCT BY QUERY (Name or Barcode)
+// FETCH PRODUCT BY NAME OR BARCODE
 // ============================================
 async function fetchProductDetails(query) {
     const container = document.getElementById('productContainer');
@@ -95,7 +95,7 @@ async function fetchProductDetails(query) {
 
     if (loading) loading.style.display = "block";
     if (container) container.style.display = "none";
-    container.innerHTML = ''; // Clear previous details
+    container.innerHTML = '';
 
     try {
         const response = await fetch(`https://your-backend-api.com/product?query=${encodeURIComponent(query)}`);
@@ -117,7 +117,7 @@ async function fetchProductDetails(query) {
 }
 
 // ============================================
-// FETCH PRODUCT BY BARCODE
+// FETCH PRODUCT BY BARCODE (calls same as fetchProductDetails)
 // ============================================
 async function fetchProductByBarcode(barcode) {
     return fetchProductDetails(barcode);
@@ -148,10 +148,7 @@ function generateProductHTML(product) {
             <!-- HEADER -->
             <div class="product-header-card">
                 <div class="product-left">
-                    ${product.image 
-                        ? `<img src="${product.image}" class="product-img">`
-                        : `<div class="product-placeholder">📦</div>`
-                    }
+                    ${product.image ? `<img src="${product.image}" class="product-img">` : `<div class="product-placeholder">📦</div>`}
                 </div>
                 <div class="product-right">
                     <h1 class="product-title">${product.name}</h1>
@@ -168,10 +165,7 @@ function generateProductHTML(product) {
                 <!-- INGREDIENTS -->
                 <div class="info-card">
                     <h3>Ingredients</h3>
-                    ${product.ingredientsList.length > 0
-                        ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>`
-                        : `<p>${product.ingredientsText}</p>`
-                    }
+                    ${product.ingredientsList.length > 0 ? `<ul>${product.ingredientsList.map(i => `<li>${i}</li>`).join("")}</ul>` : `<p>${product.ingredientsText}</p>`}
                 </div>
 
                 <!-- NUTRITION -->
@@ -188,27 +182,18 @@ function generateProductHTML(product) {
                 <!-- ADDITIVES -->
                 <div class="info-card">
                     <h3>Additives</h3>
-                    ${product.additives.length > 0
-                        ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>`
-                        : `<p>No additives reported</p>`
-                    }
+                    ${product.additives.length > 0 ? `<ul>${product.additives.map(a => `<li>${a}</li>`).join("")}</ul>` : `<p>No additives reported</p>`}
                 </div>
 
                 <!-- ALLERGENS -->
                 <div class="info-card">
                     <h3>Allergens</h3>
-                    ${product.allergens
-                        ? `<p class="allergen-danger">${product.allergens}</p>`
-                        : `<p class="allergen-safe">No allergens reported</p>`
-                    }
+                    ${product.allergens ? `<p class="allergen-danger">${product.allergens}</p>` : `<p class="allergen-safe">No allergens reported</p>`}
                 </div>
 
             </div>
 
-            <div class="footer-note">
-                Data sourced live from OpenFoodFacts.
-            </div>
-
+            <div class="footer-note">Data sourced live from OpenFoodFacts.</div>
         </div>
     `;
 }
@@ -226,10 +211,8 @@ function calculateConcern(product) {
 
     score = Math.max(0, score);
 
-    if (score >= 80)
-        return { score, level: "low", label: "Low Concern" };
-    if (score >= 50)
-        return { score, level: "moderate", label: "Moderate Concern" };
+    if (score >= 80) return { score, level: "low", label: "Low Concern" };
+    if (score >= 50) return { score, level: "moderate", label: "Moderate Concern" };
     return { score, level: "high", label: "High Concern" };
 }
 
