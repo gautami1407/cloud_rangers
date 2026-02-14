@@ -102,16 +102,30 @@
                             <i class="bi bi-search"></i>
                             Manual Search
                         </button>
-                        <div id="searchResults"></div>
-                    </div>
-                </div>
-<div class="modal fade" id="manualSearchModal" tabindex="-1">
+                        <div class="modal fade" id="manualSearchModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        ...
-        <input type="text" class="form-control" id="productSearch" placeholder="Enter product name...">
-        ...
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manual Product Search</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="productSearch" class="form-label">Product Name or Barcode</label>
+                    <input type="text" class="form-control" id="productSearch" placeholder="Enter product name...">
+                </div>
+                <button class="btn btn-primary w-100" onclick="showSearchResults()">
+                    <i class="bi bi-search"></i>
+                    Search
+                </button>
+                <div id="searchResults" class="mt-3"></div>
+            </div>
+        </div>
     </div>
 </div>
+                    </div>
+                </div>
+                
 
             </div>
 
