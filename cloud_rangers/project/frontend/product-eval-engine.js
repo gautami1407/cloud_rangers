@@ -77,7 +77,7 @@ async function fetchProductByBarcode(barcode) {
 
     try {
         // Fetch product from backend
-        const response = await fetch(`https://your-backend-api.com/product?query=${encodeURIComponent(barcode)}`);
+        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/[BARCODE].json`);
         const data = await response.json();
 
         if (!data || Object.keys(data).length === 0) {
