@@ -76,3 +76,34 @@ async function fetchProductByBarcode(barcode) {
         if (loading) loading.style.display = "none";
     }
 }
+window.addEventListener("DOMContentLoaded", () => {
+    startCameraScanner();
+});
+
+function startCameraScanner() {
+    const codeReader = new ZXing.BrowserBarcodeReader();
+    const videoElement = document.getElementById("video");
+    const statusEl = document.getElementById("scan-status");
+
+    codeReader
+        .listVideoInputDevices()
+        .then(videoInputDevices => {
+            const firstDeviceId = videoInputDevices[0].deviceId;
+
+            codeReader.decodeFromVideoDevice(firstDeviceId, videoElement, (result, err) => {
+                if (result) {
+                    const barcode = result.text;
+                    statusEl.textContent = `Barcode detected: ${barcode}`;
+                    fetchProductByBarcode(barcode);
+                    codeReader.reset(); // stop scanning after one scan
+                }
+                if (err && !(err instanceof ZXing.NotFoundException)) {
+                    console.error(err);
+                }
+            });
+        })
+        .catch(err => {
+            console.error("Camera init error:", err);
+            statusEl.textContent = "Error accessing camera. Use manual input instead.";
+        });
+}
