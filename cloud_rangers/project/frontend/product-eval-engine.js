@@ -1,34 +1,124 @@
 // ============================================
+// AUTH CHECK
+// ============================================
+if (localStorage.getItem("isLoggedIn") !== "true") {
+    window.location.href = "login.html";
+}
+
+// ============================================
 // TRANSFORM OPEN FOOD FACTS DATA
 // ============================================
 function transformOpenFoodData(product) {
     return {
         name: product.product_name || "Unknown Product",
         brand: product.brands || "Unknown Brand",
-        ingredientsText: product.ingredients_text || "Not Available",
-        ingredientsList: product.ingredients
-            ? product.ingredients.map(i => i.text).filter(Boolean)
-            : [],
+        image: product.image_url || "",
+        ingredientsText: product.ingredients_text || "Not available",
+        ingredientsList: product.ingredients ? product.ingredients.map(i => i.text).filter(Boolean) : [],
         nutriments: product.nutriments || {},
         nutriscore: product.nutriscore_grade || "unknown",
         additives: product.additives_tags || [],
         allergens: product.allergens || "",
-        image: product.image_url || ""
+        risks: product.risks || [],
+        health_score: product.health_score || 0
     };
 }
 
 // ============================================
-// CALL AI INGREDIENT ANALYZER (async)
+// MAIN LOAD
+// ============================================
+window.addEventListener("DOMContentLoaded", () => {
+    const storedProduct = localStorage.getItem("openFoodProduct");
+    if (storedProduct) {
+        const rawProduct = JSON.parse(storedProduct);
+        processProduct(rawProduct);
+        localStorage.removeItem("openFoodProduct");
+    }
+
+    // Setup barcode scanning
+    setupBarcodeScan();
+});
+
+// ============================================
+// BARCODE SCAN SETUP
+// ============================================
+function setupBarcodeScan() {
+    const barcodeInput = document.getElementById("barcode-input");
+    const fetchBtn = document.getElementById("fetch-barcode-btn");
+
+    if (!barcodeInput || !fetchBtn) return;
+
+    const barcodeHandler = async () => {
+        const barcode = barcodeInput.value.trim();
+        if (!barcode) return showError("Please enter a barcode.");
+        await fetchProductByBarcode(barcode);
+    };
+
+    fetchBtn.addEventListener("click", barcodeHandler);
+    barcodeInput.addEventListener("keypress", e => {
+        if (e.key === "Enter") barcodeHandler();
+    });
+}
+
+// ============================================
+// FETCH PRODUCT BY BARCODE
+// ============================================
+async function fetchProductByBarcode(barcode) {
+    const loading = document.getElementById("loadingContainer");
+    const container = document.getElementById("productContainer");
+
+    if (loading) loading.style.display = "block";
+    if (container) container.style.display = "none";
+    container.innerHTML = '';
+
+    try {
+        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        if (!response.ok) throw new Error(`Network response was not OK (${response.status})`);
+        const data = await response.json();
+
+        if (!data || data.status !== 1 || !data.product) {
+            return showError("Product not found in OpenFoodFacts.");
+        }
+
+        processProduct(data.product);
+
+    } catch (err) {
+        console.error("Error fetching data:", err);
+        showError("Error fetching product from OpenFoodFacts. Check your internet or barcode.");
+    } finally {
+        if (loading) loading.style.display = "none";
+    }
+}
+
+// ============================================
+// PROCESS PRODUCT (Render + AI + News)
+// ============================================
+async function processProduct(rawProduct) {
+    const product = transformOpenFoodData(rawProduct);
+
+    // AI analysis
+    const aiAnalysis = await analyzeIngredientsAI(product);
+
+    // Render product
+    renderDynamicProduct(product, aiAnalysis);
+
+    // Fetch news
+    fetchNews(product.name);
+}
+
+// ============================================
+// AI INGREDIENT ANALYZER
 // ============================================
 async function analyzeIngredientsAI(product) {
+    if (!product.ingredientsList || product.ingredientsList.length === 0) return null;
+
     try {
-        if (!product.ingredientsList.length) return null;
-        const res = await fetch("http://127.0.0.1:8000/analyze-ingredients", {
+        const response = await fetch("http://127.0.0.1:8000/analyze-ingredients", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ingredients: product.ingredientsList })
         });
-        return await res.json();
+        return await response.json();
     } catch (err) {
         console.error("AI Analysis Error:", err);
         return null;
@@ -40,7 +130,11 @@ async function analyzeIngredientsAI(product) {
 // ============================================
 function renderDynamicProduct(product, aiAnalysis) {
     const container = document.getElementById("productContainer");
-    container.style.display = "block";
+    const loading = document.getElementById("loadingContainer");
+
+    if (loading) loading.style.display = "none";
+    if (container) container.style.display = "block";
+
     container.innerHTML = generateProductHTML(product, aiAnalysis);
 }
 
@@ -48,28 +142,31 @@ function renderDynamicProduct(product, aiAnalysis) {
 // GENERATE PRODUCT HTML
 // ============================================
 function generateProductHTML(product, aiAnalysis) {
-    const concern = calculateConcern(product);
+    const concernData = calculateConcern(product);
 
     let aiHTML = "";
     if (aiAnalysis) {
         aiHTML = `<div class="info-card">
-            <h3>AI Ingredient Analysis</h3>
-            <p><strong>Overall Health Risk:</strong> ${aiAnalysis.overall_health_risk}</p>
-            ${aiAnalysis.high_risk_ingredients?.length ? `<p><strong>High Risk:</strong> ${aiAnalysis.high_risk_ingredients.join(", ")}</p>` : ""}
+            <h3>🤖 AI Ingredient Analysis</h3>
+            ${aiAnalysis.overall_health_risk ? `<p><strong>Overall Risk:</strong> ${aiAnalysis.overall_health_risk}</p>` : ""}
+            ${aiAnalysis.high_risk_ingredients?.length ? `<p><strong>High Risk Ingredients:</strong> ${aiAnalysis.high_risk_ingredients.join(", ")}</p>` : ""}
             ${aiAnalysis.comments?.length ? `<ul>${aiAnalysis.comments.map(c => `<li>${c}</li>`).join("")}</ul>` : ""}
         </div>`;
     }
 
     return `
         <div class="product-wrapper">
+
             <div class="product-header-card">
                 <div class="product-left">
                     ${product.image ? `<img src="${product.image}" class="product-img">` : `<div class="product-placeholder">📦</div>`}
                 </div>
                 <div class="product-right">
-                    <h1 class="product-title">${product.name}</h1>
-                    <p class="product-brand">${product.brand}</p>
-                    <div class="concern-badge ${concern.level}">${concern.label} • Score ${concern.score}/100</div>
+                    <h1>${product.name}</h1>
+                    <p>${product.brand}</p>
+                    <div class="concern-badge ${concernData.level}">
+                        ${concernData.label} • Score ${concernData.score}/100
+                    </div>
                 </div>
             </div>
 
@@ -81,12 +178,10 @@ function generateProductHTML(product, aiAnalysis) {
 
                 <div class="info-card">
                     <h3>Nutrition (per 100g)</h3>
-                    <div class="nutrition-grid">
-                        <div><strong>Energy</strong><br>${product.nutriments["energy-kcal_100g"] || "N/A"} kcal</div>
-                        <div><strong>Sugar</strong><br>${product.nutriments.sugars_100g || "N/A"} g</div>
-                        <div><strong>Fat</strong><br>${product.nutriments.fat_100g || "N/A"} g</div>
-                        <div><strong>Salt</strong><br>${product.nutriments.salt_100g || "N/A"} g</div>
-                    </div>
+                    <p><strong>Energy:</strong> ${product.nutriments["energy-kcal_100g"] || "N/A"} kcal</p>
+                    <p><strong>Sugar:</strong> ${product.nutriments.sugars_100g || "N/A"} g</p>
+                    <p><strong>Fat:</strong> ${product.nutriments.fat_100g || "N/A"} g</p>
+                    <p><strong>Salt:</strong> ${product.nutriments.salt_100g || "N/A"} g</p>
                 </div>
 
                 <div class="info-card">
@@ -96,7 +191,7 @@ function generateProductHTML(product, aiAnalysis) {
 
                 <div class="info-card">
                     <h3>Allergens</h3>
-                    ${product.allergens ? `<p class="allergen-danger">${product.allergens}</p>` : `<p class="allergen-safe">No allergens reported</p>`}
+                    ${product.allergens ? `<p>${product.allergens}</p>` : `<p>No allergens reported</p>`}
                 </div>
 
                 ${aiHTML}
@@ -117,6 +212,7 @@ function calculateConcern(product) {
     if (product.additives.length > 5) score -= 20;
     if (product.ingredientsText.toLowerCase().includes("palm oil")) score -= 10;
     score = Math.max(0, score);
+
     if (score >= 80) return { score, level: "low", label: "Low Concern" };
     if (score >= 50) return { score, level: "moderate", label: "Moderate Concern" };
     return { score, level: "high", label: "High Concern" };
@@ -127,12 +223,22 @@ function calculateConcern(product) {
 // ============================================
 function showError(message) {
     const container = document.getElementById("productContainer");
-    container.style.display = "block";
-    container.innerHTML = `<div style="text-align:center;padding:5rem 2rem;"><h2>Product Not Found</h2><p>${message}</p></div>`;
+    const loading = document.getElementById("loadingContainer");
+
+    if (loading) loading.style.display = "none";
+    if (container) container.style.display = "block";
+
+    container.innerHTML = `
+        <div style="text-align:center;padding:5rem 2rem;">
+            <h2>Product Not Found</h2>
+            <p>${message}</p>
+            <a href="dashboard.html" class="back-btn">Return to Dashboard</a>
+        </div>
+    `;
 }
 
 // ============================================
-// FETCH NEWS
+// FETCH PRODUCT SAFETY NEWS
 // ============================================
 async function fetchNews(productName) {
     try {
@@ -144,7 +250,7 @@ async function fetchNews(productName) {
         const data = await res.json();
         displayNews(data.news || []);
     } catch (err) {
-        console.error("News fetch error:", err);
+        console.error(err);
         displayNews([]);
     }
 }
@@ -152,20 +258,20 @@ async function fetchNews(productName) {
 function displayNews(newsList) {
     const container = document.getElementById("news-section");
     container.innerHTML = "";
+
     if (!newsList.length) {
-        container.innerHTML = `<p>No recent safety alerts found.</p>`;
+        container.innerHTML = `<p>No recent safety alerts found for this product.</p>`;
         return;
     }
+
     newsList.forEach(n => {
-        container.innerHTML += `
-            <div class="news-card">
-                <img src="${n.thumbnail || 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=80'}" class="news-image"/>
-                <div>
-                    <div class="news-meta">${n.source || "Unknown Source"} • ${n.date || "Unknown Date"}</div>
-                    <div class="news-title">${n.title}</div>
-                    <a href="${n.link}" target="_blank">Read More</a>
-                </div>
+        container.innerHTML += `<div class="news-card">
+            <img src="${n.thumbnail || 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=80'}" class="news-image"/>
+            <div>
+                <div>${n.source || "Unknown"} • ${n.date || "Unknown"}</div>
+                <div>${n.title}</div>
+                <a href="${n.link}" target="_blank">Read More</a>
             </div>
-        `;
+        </div>`;
     });
 }

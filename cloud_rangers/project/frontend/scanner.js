@@ -1,109 +1,66 @@
-// ============================================
-// AUTH CHECK
-// ============================================
-if (localStorage.getItem("isLoggedIn") !== "true") {
-    window.location.href = "login.html";
-}
+window.addEventListener("DOMContentLoaded", startScanner);
 
-// ============================================
-// MAIN LOAD
-// ============================================
-window.addEventListener("DOMContentLoaded", () => {
-    setupBarcodeScan();
-});
+function startScanner() {
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+    const videoElement = document.getElementById("video");
+    const statusText = document.getElementById("status");
 
-let lastScannedBarcode = null;
+    statusText.textContent = "Accessing camera...";
 
-function setupBarcodeScan() {
-    const barcodeInput = document.getElementById("barcode-input");
-    const fetchBtn = document.getElementById("fetch-barcode-btn");
+    codeReader.decodeFromVideoDevice(null, videoElement, async (result, err) => {
+        if (result) {
+            const barcode = result.getText();
+            statusText.textContent = `✅ Barcode detected: ${barcode}`;
 
-    if (!barcodeInput || !fetchBtn) return;
+            codeReader.reset(); // stop camera after first successful scan
 
-    const barcodeHandler = async () => {
-        const barcode = barcodeInput.value.trim();
-        if (!barcode) return;
-        if (barcode === lastScannedBarcode) return; // prevent repeat fetch
-        lastScannedBarcode = barcode;
+            // fetch the product and feed to product-eval-engine
+            await fetchProductByBarcode(barcode);
+        }
 
-        await fetchProductByBarcode(barcode);
-    };
-
-    fetchBtn.addEventListener("click", barcodeHandler);
-    barcodeInput.addEventListener("keypress", e => {
-        if (e.key === "Enter") barcodeHandler();
+        if (err && !(err instanceof ZXing.NotFoundException)) {
+            console.error(err);
+        }
     });
 }
 
 // ============================================
-// FETCH PRODUCT FROM OPEN FOOD FACTS
+// Fetch from OpenFoodFacts and feed to engine
 // ============================================
 async function fetchProductByBarcode(barcode) {
-    const loading = document.getElementById("loadingContainer");
     const container = document.getElementById("productContainer");
-
-    if (loading) loading.style.display = "block";
-    if (container) container.style.display = "none";
-    container.innerHTML = '';
+    container.innerHTML = "Fetching product data...";
 
     try {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const response = await fetch(
+            `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
+        );
 
-        const data = await res.json();
+        if (!response.ok) throw new Error("Network error");
+
+        const data = await response.json();
 
         if (!data || data.status !== 1 || !data.product) {
-            return showError("Product not found in OpenFoodFacts.");
+            container.innerHTML = "<h3>❌ Product not found in OpenFoodFacts</h3>";
+            return;
         }
 
+        // Transform data
         const product = transformOpenFoodData(data.product);
 
-        // Render immediately
+        // Render product immediately
         renderDynamicProduct(product, null);
 
-        // Fetch AI analysis asynchronously
+        // Optional: call AI analysis asynchronously
         analyzeIngredientsAI(product).then(aiData => {
             renderDynamicProduct(product, aiData); // update AI section
         });
 
-        // Fetch news asynchronously
+        // Optional: fetch news asynchronously
         fetchNews(product.name);
 
-    } catch (err) {
-        console.error("Error fetching data:", err);
-        showError("Error fetching product from OpenFoodFacts.");
-    } finally {
-        if (loading) loading.style.display = "none";
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = "<h3>⚠️ Error fetching product data</h3>";
     }
-}
-window.addEventListener("DOMContentLoaded", () => {
-    startCameraScanner();
-});
-
-function startCameraScanner() {
-    const codeReader = new ZXing.BrowserBarcodeReader();
-    const videoElement = document.getElementById("video");
-    const statusEl = document.getElementById("scan-status");
-
-    codeReader
-        .listVideoInputDevices()
-        .then(videoInputDevices => {
-            const firstDeviceId = videoInputDevices[0].deviceId;
-
-            codeReader.decodeFromVideoDevice(firstDeviceId, videoElement, (result, err) => {
-                if (result) {
-                    const barcode = result.text;
-                    statusEl.textContent = `Barcode detected: ${barcode}`;
-                    fetchProductByBarcode(barcode);
-                    codeReader.reset(); // stop scanning after one scan
-                }
-                if (err && !(err instanceof ZXing.NotFoundException)) {
-                    console.error(err);
-                }
-            });
-        })
-        .catch(err => {
-            console.error("Camera init error:", err);
-            statusEl.textContent = "Error accessing camera. Use manual input instead.";
-        });
 }
