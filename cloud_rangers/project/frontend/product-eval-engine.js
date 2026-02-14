@@ -76,19 +76,25 @@ async function fetchProductByBarcode(barcode) {
     container.innerHTML = '';
 
     try {
-        // Fetch product from backend
-        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/[BARCODE].json`);
-        const data = await response.json();
-
-        if (!data || Object.keys(data).length === 0) {
-            return showError("No product details found for this barcode.");
+        // Fetch directly from OpenFoodFacts
+        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        if (!response.ok) {
+            throw new Error(`Network response was not OK, status: ${response.status}`);
         }
 
-        processProduct(data);
+        const data = await response.json();
+
+        // Check if product exists
+        if (!data || data.status !== 1 || !data.product) {
+            return showError("Product not found in OpenFoodFacts.");
+        }
+
+        // Process and render product
+        processProduct(data.product);
 
     } catch (err) {
-        console.error(err);
-        showError("Error fetching product details. Try again later.");
+        console.error("Error fetching data:", err);
+        showError("Error fetching product from OpenFoodFacts. Check your internet or barcode.");
     } finally {
         if (loading) loading.style.display = "none";
     }
