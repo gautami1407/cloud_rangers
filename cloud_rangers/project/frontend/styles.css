@@ -466,7 +466,10 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--gray-900);
     margin-bottom: 12px;
 }
-
+.btn-col{
+    color: white;
+    background-color: #0ca776;
+}
 .factor-description {
     font-size: 15px;
     color: var(--gray-600);
