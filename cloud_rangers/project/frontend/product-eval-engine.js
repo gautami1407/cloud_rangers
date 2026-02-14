@@ -27,7 +27,7 @@ function transformOpenFoodData(product) {
 // ============================================
 // MAIN LOAD
 // ============================================
-window.addEventListener("load", function () {
+window.addEventListener("DOMContentLoaded", () => {
     const storedProduct = localStorage.getItem("openFoodProduct");
 
     if (storedProduct) {
@@ -38,44 +38,63 @@ window.addEventListener("load", function () {
         localStorage.removeItem("openFoodProduct");
     }
 
-    // Manual input
+    setupManualSearch();
+    setupBarcodeSearch();
+});
+
+// ============================================
+// SETUP MANUAL SEARCH
+// ============================================
+function setupManualSearch() {
     const manualInput = document.getElementById("manualInput");
     const searchBtn = document.getElementById("searchBtn");
-    if (searchBtn && manualInput) {
-        const searchHandler = async () => {
-            const query = manualInput.value.trim();
-            if (!query) return showError("Please enter a product name or barcode.");
-            await fetchProductDetails(query);
-            fetchNews(query);
-        };
-        searchBtn.addEventListener("click", searchHandler);
-        manualInput.addEventListener("keypress", e => {
-            if (e.key === "Enter") searchHandler();
-        });
-    }
 
-    // Barcode input
-    const fetchBtn = document.getElementById("fetch-barcode-btn");
+    if (!manualInput || !searchBtn) return;
+
+    const searchHandler = async () => {
+        const query = manualInput.value.trim();
+        if (!query) return showError("Please enter a product name or barcode.");
+        await fetchProductDetails(query);
+        fetchNews(query);
+    };
+
+    searchBtn.addEventListener("click", searchHandler);
+    manualInput.addEventListener("keypress", e => {
+        if (e.key === "Enter") searchHandler();
+    });
+}
+
+// ============================================
+// SETUP BARCODE SEARCH
+// ============================================
+function setupBarcodeSearch() {
     const barcodeInput = document.getElementById("barcode-input");
-    if (fetchBtn && barcodeInput) {
-        const barcodeHandler = async () => {
-            const barcode = barcodeInput.value.trim();
-            if (!barcode) return showError("Please enter a barcode.");
-            await fetchProductByBarcode(barcode);
-            fetchNews(barcode);
-        };
-        fetchBtn.addEventListener("click", barcodeHandler);
-        barcodeInput.addEventListener("keypress", e => {
-            if (e.key === "Enter") barcodeHandler();
-        });
-    }
-});
+    const fetchBtn = document.getElementById("fetch-barcode-btn");
+
+    if (!barcodeInput || !fetchBtn) return;
+
+    const barcodeHandler = async () => {
+        const barcode = barcodeInput.value.trim();
+        if (!barcode) return showError("Please enter a barcode.");
+        await fetchProductByBarcode(barcode);
+        fetchNews(barcode);
+    };
+
+    fetchBtn.addEventListener("click", barcodeHandler);
+    barcodeInput.addEventListener("keypress", e => {
+        if (e.key === "Enter") barcodeHandler();
+    });
+}
 
 // ============================================
 // FETCH PRODUCT BY QUERY (Name or Barcode)
 // ============================================
 async function fetchProductDetails(query) {
-    const container = document.getElementById('productDetails');
+    const container = document.getElementById('productContainer');
+    const loading = document.getElementById("loadingContainer");
+
+    if (loading) loading.style.display = "block";
+    if (container) container.style.display = "none";
     container.innerHTML = ''; // Clear previous details
 
     try {
@@ -92,7 +111,16 @@ async function fetchProductDetails(query) {
     } catch (err) {
         console.error(err);
         showError("Error fetching product details. Try again later.");
+    } finally {
+        if (loading) loading.style.display = "none";
     }
+}
+
+// ============================================
+// FETCH PRODUCT BY BARCODE
+// ============================================
+async function fetchProductByBarcode(barcode) {
+    return fetchProductDetails(barcode);
 }
 
 // ============================================
@@ -109,7 +137,7 @@ function renderDynamicProduct(product) {
 }
 
 // ============================================
-// GENERATE FULL 6 FACTOR HTML
+// GENERATE PRODUCT HTML
 // ============================================
 function generateProductHTML(product) {
     const concernData = calculateConcern(product);
@@ -199,31 +227,29 @@ function calculateConcern(product) {
     score = Math.max(0, score);
 
     if (score >= 80)
-        return { score, level: "low", label: "Low Concern", explanation: "Good nutritional profile with minimal risk indicators." };
+        return { score, level: "low", label: "Low Concern" };
     if (score >= 50)
-        return { score, level: "moderate", label: "Moderate Concern", explanation: "Some processed ingredients or moderate nutrition risks detected." };
-    return { score, level: "high", label: "High Concern", explanation: "High processing level or poor nutritional score." };
+        return { score, level: "moderate", label: "Moderate Concern" };
+    return { score, level: "high", label: "High Concern" };
 }
 
 // ============================================
 // SHOW ERROR
 // ============================================
 function showError(message) {
-    const loading = document.getElementById("loadingContainer");
     const container = document.getElementById("productContainer");
+    const loading = document.getElementById("loadingContainer");
 
-    if (loading) loading.classList.remove("active");
-    if (container) container.classList.add("active");
+    if (loading) loading.style.display = "none";
+    if (container) container.style.display = "block";
 
-    if (container) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:5rem 2rem;">
-                <h2>Product Not Found</h2>
-                <p>${message}</p>
-                <a href="dashboard.html" class="back-btn">Return to Dashboard</a>
-            </div>
-        `;
-    }
+    container.innerHTML = `
+        <div style="text-align:center;padding:5rem 2rem;">
+            <h2>Product Not Found</h2>
+            <p>${message}</p>
+            <a href="dashboard.html" class="back-btn">Return to Dashboard</a>
+        </div>
+    `;
 }
 
 // ============================================
@@ -267,11 +293,4 @@ function displayNews(newsList) {
             </div>
         `;
     });
-}
-
-// ============================================
-// FETCH PRODUCT BY BARCODE
-// ============================================
-async function fetchProductByBarcode(barcode) {
-    return fetchProductDetails(barcode);
 }
