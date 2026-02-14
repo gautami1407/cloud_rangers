@@ -1,31 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Barcode Scanner</title>
-
-<!-- ZXing Barcode Library -->
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
-
-<style>
-  body { font-family: Arial; background:#f4f4f4; text-align:center; margin:0; padding:20px;}
-  video { width: 100%; max-width: 400px; border-radius:10px; border:2px solid #333;}
-  #status { margin:10px; font-weight:bold;}
-  #productContainer { margin-top:20px; background:#fff; padding:20px; border-radius:10px;}
-</style>
+    <meta charset="UTF-8">
+    <title>Barcode Scanner</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin: 0; padding: 0; }
+        #scanner-container { width: 100%; height: 100vh; position: relative; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        #message { position: absolute; bottom: 20px; width: 100%; text-align: center; color: white; font-size: 1.2rem; text-shadow: 1px 1px 4px black; }
+    </style>
 </head>
 <body>
+    <div id="scanner-container">
+        <video id="video" autoplay></video>
+        <div id="message">Point the camera at a barcode</div>
+    </div>
 
-<h2>📷 Scan Product Barcode</h2>
+    <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <script>
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const videoElement = document.getElementById('video');
 
-<video id="video"></video>
-<p id="status">Initializing camera...</p>
+        codeReader
+            .listVideoInputDevices()
+            .then((videoInputDevices) => {
+                const deviceId = videoInputDevices[0]?.deviceId;
+                if (!deviceId) {
+                    alert("No camera found!");
+                    return;
+                }
 
-<div id="productContainer"></div>
-
-<script src="product-eval-engine.js"></script>
-<script src="scanner.js"></script>
-
+                codeReader.decodeFromVideoDevice(deviceId, videoElement, (result, err) => {
+                    if (result) {
+                        const barcode = result.text;
+                        // Redirect to product page with barcode
+                        localStorage.setItem("scannedBarcode", barcode);
+                        window.location.href = "product.html";
+                    }
+                    // err is ignored to continue scanning
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error accessing camera: " + err);
+            });
+    </script>
 </body>
 </html>

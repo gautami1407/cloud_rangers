@@ -1,127 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Product Evaluation</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        .product-wrapper {
-    max-width: 1000px;
-    margin: 2rem auto;
-    font-family: 'Inter', sans-serif;
-}
-
-.product-header-card {
-    display: flex;
-    gap: 2rem;
-    background: white;
-    padding: 2rem;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    align-items: center;
-}
-
-.product-img {
-    width: 140px;
-    border-radius: 12px;
-}
-
-.product-placeholder {
-    font-size: 80px;
-}
-
-.product-title {
-    margin: 0;
-    font-size: 1.8rem;
-}
-
-.product-brand {
-    color: #6B7280;
-    margin-bottom: 1rem;
-}
-
-.concern-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    display: inline-block;
-}
-
-.concern-badge.low {
-    background: #D1FAE5;
-    color: #065F46;
-}
-
-.concern-badge.moderate {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-.concern-badge.high {
-    background: #FEE2E2;
-    color: #991B1B;
-}
-
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-}
-
-.info-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-}
-
-.nutrition-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.allergen-danger {
-    color: #DC2626;
-    font-weight: 600;
-}
-
-.allergen-safe {
-    color: #059669;
-    font-weight: 600;
-}
-
-.footer-note {
-    margin-top: 2rem;
-    padding: 1rem;
-    text-align: center;
-    background: #EFF6FF;
-    border-radius: 12px;
-    font-weight: 500;
-}
-
-    </style>
+    <meta charset="UTF-8">
+    <title>Product Details</title>
+    <link rel="stylesheet" href="style1.css">
 </head>
 <body>
+    <div id="loadingContainer">Loading product...</div>
+    <div id="productContainer" style="display:none"></div>
+    <div id="news-section"></div>
 
-<div class="container">
+    <script src="product-eval-engine.js"></script>
+    <script>
+        // On load, fetch the scanned barcode from scanner.html
+        window.addEventListener("DOMContentLoaded", async () => {
+            const barcode = localStorage.getItem("scannedBarcode");
+            if (!barcode) {
+                showError("No barcode scanned. Please go back and scan a product.");
+                return;
+            }
 
-    <div id="loadingContainer" class="active">
-    <h2>Loading Product...</h2>
-</div>
+            // Clear it after using
+            localStorage.removeItem("scannedBarcode");
 
-<div id="productContainer"></div>
-
-    <div class="product-brand" id="brand-name"></div>
-    <h1 class="product-name" id="product-name"></h1>
-    <p class="product-description" id="product-description"></p>
-
-</div>
-<h3>Latest Safety Alerts</h3>
-<div id="news-section"></div>
-
-
-<script src="product-eval-engine.js"></script>
-
+            // Fetch product using barcode
+            await fetchProductByBarcode(barcode);
+        });
+    </script>
 </body>
 </html>
