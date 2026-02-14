@@ -1,74 +1,91 @@
 // Dashboard JavaScript
 // Handles sidebar toggle, mobile menu, and dashboard interactions
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const sidebar = document.getElementById('sidebar');
     const menuToggle = document.getElementById('menuToggle');
-    
+
     // Mobile sidebar toggle
     if (menuToggle && sidebar) {
-        menuToggle.addEventListener('click', function() {
+        menuToggle.addEventListener('click', function () {
             sidebar.classList.toggle('active');
-            
+
             // Close sidebar when clicking outside on mobile
             if (sidebar.classList.contains('active')) {
                 document.addEventListener('click', closeSidebarOnOutsideClick);
             }
         });
     }
-    
+
     function closeSidebarOnOutsideClick(e) {
         if (sidebar && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
             sidebar.classList.remove('active');
             document.removeEventListener('click', closeSidebarOnOutsideClick);
         }
     }
-    
+
     // Close sidebar on nav link click (mobile)
     const navLinks = document.querySelectorAll('.sidebar .nav-item');
     navLinks.forEach(link => {
-        link.addEventListener('click', function() {
+        link.addEventListener('click', function () {
             if (window.innerWidth <= 991) {
                 sidebar.classList.remove('active');
             }
         });
     });
-    
+
     // Manual search modal handling
     const manualSearchModal = document.getElementById('manualSearchModal');
     if (manualSearchModal) {
         const productSearchInput = document.getElementById('productSearch');
-        
-        manualSearchModal.addEventListener('shown.bs.modal', function() {
+
+        manualSearchModal.addEventListener('shown.bs.modal', function () {
             productSearchInput.focus();
         });
-        
+
         // Handle search (placeholder - would connect to API in production)
         const searchBtn = manualSearchModal.querySelector('.btn-primary');
         if (searchBtn) {
-            searchBtn.addEventListener('click', function() {
+            searchBtn.addEventListener('click', async function () {
                 const searchQuery = productSearchInput.value.trim();
+                const btnOriginalText = searchBtn.innerHTML;
+
                 if (searchQuery) {
-                    // In production: API call to /api/products/search?q={searchQuery}
-                    fetchProductDetails(query); // This function fetches and displays full product evaluation                   
-                    bootstrap.Modal.getInstance(manualSearchModal).hide();
-                    
-                    // Simulate redirect to product result
-                    // window.location.href = 'product-result.html?q=' + encodeURIComponent(searchQuery);
+                    searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Searching...';
+                    searchBtn.disabled = true;
+
+                    try {
+                        const response = await fetch(`http://127.0.0.1:8000/api/product/${encodeURIComponent(searchQuery)}`);
+
+                        if (response.ok) {
+                            const product = await response.json();
+                            // Store for product.html to pick up
+                            localStorage.setItem("openFoodProduct", JSON.stringify(product));
+                            window.location.href = 'product.html';
+                        } else {
+                            alert('Product not found. Try a specific barcode or different name.');
+                        }
+                    } catch (error) {
+                        console.error('Search error:', error);
+                        alert('An error occurred while searching.');
+                    } finally {
+                        searchBtn.innerHTML = btnOriginalText;
+                        searchBtn.disabled = false;
+                    }
                 } else {
                     alert('Please enter a product name or barcode');
                 }
             });
         }
-        
+
         // Enter key to search
-        productSearchInput.addEventListener('keypress', function(e) {
+        productSearchInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 searchBtn.click();
             }
         });
     }
-    
+
     // Load user profile data to display
     loadUserProfile();
 });
@@ -76,15 +93,15 @@ document.addEventListener('DOMContentLoaded', function() {
 // Load and display user profile information
 function loadUserProfile() {
     const healthProfile = localStorage.getItem('healthProfile');
-    
+
     if (healthProfile) {
         try {
             const profile = JSON.parse(healthProfile);
-            
+
             // You can use this data to customize dashboard display
             // For example, show personalized greeting or warnings
             console.log('User health profile loaded:', profile);
-            
+
             // Example: Display allergy warning if user has allergies
             if (profile.allergies && profile.allergies.length > 0 && !profile.allergies.includes('none')) {
                 displayAllergyReminder(profile.allergies);
@@ -99,7 +116,7 @@ function loadUserProfile() {
 function displayAllergyReminder(allergies) {
     // This could be displayed as a banner or card on the dashboard
     console.log('User has allergies:', allergies);
-    
+
     // In a real implementation, you might show this in the UI:
     // const reminderHtml = `
     //     <div class="alert alert-info">

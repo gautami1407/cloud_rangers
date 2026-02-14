@@ -33,17 +33,16 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
 
             const response = await fetch(
-                `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
+                `http://127.0.0.1:8000/api/product/${barcode}`
             );
 
-            const result = await response.json();
-
-            if (result.status === 1) {
+            if (response.ok) {
+                const product = await response.json();
 
                 // Store product data
                 localStorage.setItem(
                     "openFoodProduct",
-                    JSON.stringify(result.product)
+                    JSON.stringify(product)
                 );
 
                 Quagga.stop();

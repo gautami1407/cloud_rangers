@@ -9,18 +9,20 @@ if (localStorage.getItem("isLoggedIn") !== "true") {
 // TRANSFORM OPEN FOOD FACTS DATA
 // ============================================
 function transformOpenFoodData(product) {
+    // If coming from our backend, it's already normalized, but let's ensure fields match frontend expectations
     return {
-        name: product.product_name || "Unknown Product",
-        brand: product.brands || "Unknown Brand",
+        name: product.name || "Unknown Product",
+        brand: product.brand || "Unknown Brand",
         ingredientsText: product.ingredients_text || "Not Available",
-        ingredientsList: product.ingredients
-            ? product.ingredients.map(i => i.text).filter(Boolean)
-            : [],
+        ingredientsList: product.parsed_ingredients || [],
         nutriments: product.nutriments || {},
         nutriscore: product.nutriscore_grade || "unknown",
-        additives: product.additives_tags || [],
-        allergens: product.allergens || "",
-        image: product.image_url || ""
+        additives: [], // Backend might not separate these yet, or we can add logic if needed. 
+        // For now, let's leave empty or map from product.categories if available.
+        allergens: "", // Backend normalization didn't extract allergens explicitly, can add if needed.
+        image: product.image_url || "",
+        risks: product.risks || [],
+        health_score: product.health_score || 0
     };
 }
 
@@ -115,10 +117,14 @@ async function analyzeIngredientsAI(product) {
     if (!product.ingredientsList || product.ingredientsList.length === 0) return null;
 
     try {
-        const response = await fetch("http://127.0.0.1:8000/analyze-ingredients", {
+        const response = await fetch("http://127.0.0.1:8000/api/analyze", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ingredients: product.ingredientsList })
+            body: JSON.stringify({
+                product_name: product.name,
+                ingredients: product.ingredientsList,
+                risks: product.risks
+            })
         });
 
         const data = await response.json();
@@ -149,17 +155,32 @@ function generateProductHTML(product, aiAnalysis) {
     const concernData = calculateConcern(product);
 
     let aiHTML = "";
-    if (aiAnalysis) {
+    if (aiAnalysis && aiAnalysis.explanation) {
+        // Simple markdown to HTML conversion for basic things like bolding
+        let explanationHtml = aiAnalysis.explanation
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+
         aiHTML = `
         <div class="info-card">
-            <h3>AI Ingredient Analysis</h3>
-            <p><strong>Overall Health Risk:</strong> ${aiAnalysis.overall_health_risk}</p>
-            ${aiAnalysis.high_risk_ingredients.length > 0 
-                ? `<p><strong>High Risk Ingredients:</strong> ${aiAnalysis.high_risk_ingredients.join(", ")}</p>` 
-                : ""}
-            ${aiAnalysis.comments && aiAnalysis.comments.length > 0 
-                ? `<ul>${aiAnalysis.comments.map(c => `<li>${c}</li>`).join("")}</ul>` 
-                : ""}
+            <h3>🤖 AI Health Insight</h3>
+            <p>${explanationHtml}</p>
+        </div>`;
+    }
+
+    // Risks Section
+    let riskHTML = "";
+    if (product.risks && product.risks.length > 0) {
+        riskHTML = `
+        <div class="info-card">
+            <h3>⚠️ Safety Alerts</h3>
+            ${product.risks.map(r => `
+                <div style="border-left: 4px solid #e53935; background-color: #ffebee; padding: 10px; margin-bottom: 5px; color: #333;">
+                    <strong>${r.risk_level} Risk:</strong> ${r.found_as}
+                    <br><small>${r.details}</small>
+                    <br><small>🚫 Banned in: ${r.banned_in}</small>
+                </div>
+            `).join("")}
         </div>`;
     }
 
@@ -211,6 +232,9 @@ function generateProductHTML(product, aiAnalysis) {
                     <h3>Allergens</h3>
                     ${product.allergens ? `<p class="allergen-danger">${product.allergens}</p>` : `<p class="allergen-safe">No allergens reported</p>`}
                 </div>
+
+                <!-- Risk Analysis -->
+                ${riskHTML}
 
                 <!-- AI Analysis -->
                 ${aiHTML}
