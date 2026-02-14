@@ -50,8 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const searchQuery = productSearchInput.value.trim();
                 if (searchQuery) {
                     // In production: API call to /api/products/search?q={searchQuery}
-                    alert(`Searching for: "${searchQuery}"\n\nIn production, this would:\n- Query product database\n- Display search results\n- Allow user to select a product`);
-                    
+                    fetchProductDetails(query); // This function fetches and displays full product evaluation                   
                     bootstrap.Modal.getInstance(manualSearchModal).hide();
                     
                     // Simulate redirect to product result

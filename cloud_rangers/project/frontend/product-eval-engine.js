@@ -38,41 +38,60 @@ window.addEventListener("load", function () {
         localStorage.removeItem("openFoodProduct");
     }
 
-    // Manual barcode button
+    // Manual input
+    const manualInput = document.getElementById("manualInput");
+    const searchBtn = document.getElementById("searchBtn");
+    if (searchBtn && manualInput) {
+        const searchHandler = async () => {
+            const query = manualInput.value.trim();
+            if (!query) return showError("Please enter a product name or barcode.");
+            await fetchProductDetails(query);
+            fetchNews(query);
+        };
+        searchBtn.addEventListener("click", searchHandler);
+        manualInput.addEventListener("keypress", e => {
+            if (e.key === "Enter") searchHandler();
+        });
+    }
+
+    // Barcode input
     const fetchBtn = document.getElementById("fetch-barcode-btn");
-    if (fetchBtn) {
-        fetchBtn.addEventListener("click", () => {
-            const barcode = document.getElementById("barcode-input").value.trim();
-            fetchProductByBarcode(barcode);
+    const barcodeInput = document.getElementById("barcode-input");
+    if (fetchBtn && barcodeInput) {
+        const barcodeHandler = async () => {
+            const barcode = barcodeInput.value.trim();
+            if (!barcode) return showError("Please enter a barcode.");
+            await fetchProductByBarcode(barcode);
+            fetchNews(barcode);
+        };
+        fetchBtn.addEventListener("click", barcodeHandler);
+        barcodeInput.addEventListener("keypress", e => {
+            if (e.key === "Enter") barcodeHandler();
         });
     }
 });
 
 // ============================================
-// FETCH PRODUCT BY BARCODE
+// FETCH PRODUCT BY QUERY (Name or Barcode)
 // ============================================
-async function fetchProductByBarcode(barcode) {
-    if (!barcode) {
-        alert("Please enter a barcode.");
-        return;
-    }
+async function fetchProductDetails(query) {
+    const container = document.getElementById('productDetails');
+    container.innerHTML = ''; // Clear previous details
 
     try {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        const data = await res.json();
+        const response = await fetch(`https://your-backend-api.com/product?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
 
-        if (!data.product || data.status !== 1) {
-            showError("Product not found for this barcode.");
-            return;
+        if (!data || Object.keys(data).length === 0) {
+            return showError("No product details found.");
         }
 
-        const product = transformOpenFoodData(data.product);
+        const product = transformOpenFoodData(data);
         renderDynamicProduct(product);
-        fetchNews(product.name);
 
     } catch (err) {
-        console.error("Error fetching product:", err);
-        showError("Failed to fetch product. Try again.");
+        console.error(err);
+        showError("Error fetching product details. Try again later.");
     }
 }
 
@@ -167,29 +186,27 @@ function generateProductHTML(product) {
 }
 
 // ============================================
-// DYNAMIC CONCERN CALCULATION
+// CALCULATE CONCERN SCORE
 // ============================================
 function calculateConcern(product) {
     let score = 100;
-
-    if (product.nutriscore === "e") score -= 40;
-    else if (product.nutriscore === "d") score -= 25;
-    else if (product.nutriscore === "c") score -= 10;
+    const nutriScores = { "e": 40, "d": 25, "c": 10 };
+    score -= nutriScores[product.nutriscore] || 0;
 
     if (product.additives.length > 5) score -= 20;
     if (product.ingredientsText.toLowerCase().includes("palm oil")) score -= 10;
 
+    score = Math.max(0, score);
+
     if (score >= 80)
         return { score, level: "low", label: "Low Concern", explanation: "Good nutritional profile with minimal risk indicators." };
-
     if (score >= 50)
         return { score, level: "moderate", label: "Moderate Concern", explanation: "Some processed ingredients or moderate nutrition risks detected." };
-
     return { score, level: "high", label: "High Concern", explanation: "High processing level or poor nutritional score." };
 }
 
 // ============================================
-// ERROR HANDLER
+// SHOW ERROR
 // ============================================
 function showError(message) {
     const loading = document.getElementById("loadingContainer");
@@ -203,9 +220,7 @@ function showError(message) {
             <div style="text-align:center;padding:5rem 2rem;">
                 <h2>Product Not Found</h2>
                 <p>${message}</p>
-                <a href="dashboard.html" class="back-btn">
-                    Return to Dashboard
-                </a>
+                <a href="dashboard.html" class="back-btn">Return to Dashboard</a>
             </div>
         `;
     }
@@ -222,12 +237,7 @@ async function fetchNews(productName) {
             body: JSON.stringify({ product_name: productName })
         });
         const data = await res.json();
-
-        if (data.news && data.news.length > 0) {
-            displayNews(data.news);
-        } else {
-            displayNews([]);
-        }
+        displayNews(data.news || []);
     } catch (err) {
         console.error("Error fetching news:", err);
         displayNews([]);
@@ -246,13 +256,22 @@ function displayNews(newsList) {
     newsList.forEach(n => {
         container.innerHTML += `
             <div class="news-card">
-                <img src="${n.thumbnail}" class="news-image" onerror="this.src='https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=80'"/>
+                <img src="${n.thumbnail || 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=80'}" 
+                     class="news-image" 
+                     onerror="this.src='https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=80'"/>
                 <div>
-                    <div class="news-meta">${n.source} • ${n.date}</div>
+                    <div class="news-meta">${n.source || "Unknown Source"} • ${n.date || "Unknown Date"}</div>
                     <div class="news-title">${n.title}</div>
                     <a href="${n.link}" target="_blank">Read More</a>
                 </div>
             </div>
         `;
     });
+}
+
+// ============================================
+// FETCH PRODUCT BY BARCODE
+// ============================================
+async function fetchProductByBarcode(barcode) {
+    return fetchProductDetails(barcode);
 }
