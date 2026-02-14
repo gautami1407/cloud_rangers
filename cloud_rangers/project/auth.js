@@ -180,3 +180,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return re.test(email);
     }
 });
+// Dashboard protection & display user info
+if (window.location.pathname.includes('dashboard.html')) {
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+        window.location.href = 'login.html';
+    } else {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        const nameEl = document.getElementById('userName');
+        const emailEl = document.getElementById('userEmail');
+
+        if (nameEl) nameEl.innerText = user.fullName;
+        if (emailEl) emailEl.innerText = user.email;
+    }
+}

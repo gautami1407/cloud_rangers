@@ -167,3 +167,92 @@ function displayAllergyReminder(allergies) {
        - Verify license status via FSSAI API
        - Display compliance badges accordingly
 */
+// ==========================
+// Dashboard: Display User Info
+// ==========================
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname.includes('dashboard.html')) {
+        // Check login
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Get logged-in user
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (user) {
+            const nameEl = document.getElementById('userName');
+            const emailEl = document.getElementById('userEmail');
+
+            if (nameEl) nameEl.innerText = user.fullName;
+            if (emailEl) emailEl.innerText = user.email;
+        }
+    }
+});
+
+// Logout function
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('loggedInUser');
+    window.location.href = 'login.html';
+}
+async function performSearch() {
+    const query = document.getElementById('productSearch').value.trim();
+    const resultsContainer = document.getElementById('searchResults');
+    resultsContainer.innerHTML = 'Searching...';
+
+    if (!query) {
+        resultsContainer.innerHTML = 'Please enter a product name or barcode.';
+        return;
+    }
+
+    try {
+        let url;
+
+        // If input is numeric (likely a barcode)
+        if (/^\d+$/.test(query)) {
+            url = `https://world.openfoodfacts.org/api/v0/product/${query}.json`;
+        } else {
+            // Text search
+            url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1`;
+        }
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Process barcode lookup result
+        if (data.status !== undefined) {
+            if (data.status === 1 && data.product) {
+                resultsContainer.innerHTML = `
+                    <h5>${data.product.product_name}</h5>
+                    <p><strong>Barcode:</strong> ${data.code}</p>
+                    <p><strong>Brands:</strong> ${data.product.brands || 'N/A'}</p>
+                `;
+            } else {
+                resultsContainer.innerHTML = 'Product not found.';
+            }
+        } else if (data.products && data.products.length > 0) {
+            // Process search results
+            resultsContainer.innerHTML = '<h5>Search Results:</h5>';
+            data.products.slice(0, 10).forEach(item => {
+                resultsContainer.innerHTML += `
+                    <div class="search-item">
+                        <h6>${item.product_name || 'No name available'}</h6>
+                        <p><strong>Barcode:</strong> ${item.code}</p>
+                        <hr>
+                    </div>
+                `;
+            });
+        } else {
+            resultsContainer.innerHTML = 'No products found for your search.';
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer.innerHTML = 'Error fetching data. Please try again.';
+    }
+}
