@@ -129,36 +129,7 @@
                         <p class="factor-description">
                             Quantitative risk indicator (0–100) based on ingredient composition and usage context.
                         </p>
-                    </div>                    <!-- ...existing code... -->
-                    
-                    <div id="ingredient-analysis">
-                        <!-- Existing ingredient analysis rendering here -->
                     </div>
-                    
-                    <!-- Allergy Alert will be shown here -->
-                    <div id="allergy-alert" style="color: red; font-weight: bold; margin-top: 10px;"></div>
-                    
-                    <script src="product-eval-engine.js"></script>
-                    <script>
-                        // Example: Replace with actual ingredient list from your analysis
-                        const productIngredients = [
-                            // Populate this array with actual ingredients, e.g., from API or DOM
-                            'milk', 'sugar', 'nuts'
-                        ];
-                    
-                        // Get allergy alerts
-                        const foundAllergens = window.getAllergyAlerts(productIngredients);
-                    
-                        // Display alert if allergens found
-                        const alertDiv = document.getElementById('allergy-alert');
-                        if (foundAllergens.length > 0) {
-                            alertDiv.textContent = `⚠️ Warning: This product contains your allergens: ${foundAllergens.join(', ')}`;
-                        } else {
-                            alertDiv.textContent = '';
-                        }
-                    </script>
-                    
-                    <!-- ...existing code... -->
                 </div>
 
                 <!-- Factor 2 -->
