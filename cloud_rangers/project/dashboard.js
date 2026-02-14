@@ -256,3 +256,10 @@ async function performSearch() {
         resultsContainer.innerHTML = 'Error fetching data. Please try again.';
     }
 }
+function showManualSearch() {
+    const manualModalEl = document.getElementById('manualSearchModal');
+    if (manualModalEl) {
+        const modal = new bootstrap.Modal(manualModalEl);
+        modal.show();
+    }
+}
